@@ -25,7 +25,7 @@ type Result struct {
 func Check(ctx context.Context, rawEndpoint, target string, tlsConfig *tls.Config) (Result, error) {
 	u, err := url.Parse(rawEndpoint)
 	if err != nil { return Result{}, fmt.Errorf("parse proxy endpoint: %w", err) }
-	if u.Scheme != "https" || u.Hostname() == "" || u.Port() == "" || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
+	if u.Scheme != "https" || u.Hostname() == "" || u.Port() == "" || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
 		return Result{}, errors.New("proxy endpoint must be https://host:port with no path, query, or fragment")
 	}
 	if target == "" || strings.ContainsAny(target, "\r\n ") { return Result{}, errors.New("invalid CONNECT target") }
