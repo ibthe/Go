@@ -26,13 +26,19 @@ DNS handling is a separate design decision. Do not resolve destinations through 
 
 ## Platform adapters
 
-- **macOS:** packet tunnel via Apple's Network Extension APIs. Requires signing, provisioning, and the relevant entitlement.
+- **macOS:** packet tunnel via Apple's Network Extension APIs. Requires signing, provisioning, and the relevant entitlement. See [macOS Packet Tunnel Design](docs/MACOS_TUNNEL_DESIGN.md) for the packet-to-flow boundary, candidate userspace stack, and validation gates.
 - **Windows:** evaluate Wintun plus a service and Windows Filtering Platform integration.
 - **Android:** `VpnService`, foreground service lifecycle, and per-app routing controls where supported.
 
+## Packet-to-stream boundary
+
+The HTTPS CONNECT transport exposes TCP byte streams; it does not process IP packets. A packet tunnel therefore needs a userspace IP/TCP stack (or an equivalent packet-to-flow engine) between the platform packet interface and the Go proxy dialer. Do not wire raw packets directly to `proxytransport.Dialer` or claim full-device VPN functionality until this layer is implemented and tested.
+
+gVisor netstack is a candidate for an isolated compatibility spike, not yet an adopted production dependency. Its API stability and exact upstream revision must be evaluated and pinned before integration.
+
 ## Proxy protocol compatibility
 
-An endpoint written as `HTTPS host:port` in a PAC file commonly denotes an HTTP proxy connection protected by TLS. That does not by itself prove support for UDP, QUIC, SOCKS, or arbitrary IP tunnelling. Each endpoint must be tested for independent-client access and protocol support before integration.
+An endpoint written as `HTTPS host:port` in a PAC file commonly denotes an HTTP proxy connection protected by TLS. That does not by itself prove support for UDP, QUIC, SOCKS, or arbitrary IP tunnelling. Each endpoint must be tested for independent-client access and protocol support.
 
 ## Third-party infrastructure
 
