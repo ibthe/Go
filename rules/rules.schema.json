@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ibthe/Go/rules/rules.schema.json",
+  "title": "Go local routing rules",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "rules"],
+  "properties": {
+    "version": {"type": "integer", "minimum": 1},
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["domain", "action"],
+        "properties": {
+          "domain": {"type": "string", "minLength": 1},
+          "action": {"enum": ["proxy", "direct", "block"]}
+        }
+      }
+    }
+  }
+}
