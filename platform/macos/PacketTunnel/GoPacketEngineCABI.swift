@@ -1,9 +1,6 @@
 import Darwin
 import Foundation
 
-@_silgen_name("GoEngineCreate")
-private func goEngineCreate(_ configPath: UnsafePointer<CChar>, _ timeoutMillis: Int32) -> UInt
-
 @_silgen_name("GoEngineCreateWithCredentials")
 private func goEngineCreateWithCredentials(
     _ configPath: UnsafePointer<CChar>,
