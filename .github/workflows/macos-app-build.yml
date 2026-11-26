@@ -1,0 +1,38 @@
+name: macOS app build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "platform/macos/**"
+      - "scripts/build-macos-go-library.sh"
+      - ".github/workflows/macos-app-build.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "platform/macos/**"
+      - "scripts/build-macos-go-library.sh"
+      - ".github/workflows/macos-app-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.3"
+          cache-dependency-path: experiments/gvisor/go.mod
+      - name: Build universal Go XCFramework
+        run: bash scripts/build-macos-go-library.sh build/macos
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: platform/macos
+        run: xcodegen generate
+      - name: Build unsigned macOS app and packet tunnel extension
+        working-directory: platform/macos
+        run: xcodebuild -project Go.xcodeproj -scheme Go -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
