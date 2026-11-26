@@ -132,7 +132,11 @@ func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 		if err != nil {
 			return
 		}
-		upstream, err := net.Dial("tcp", r.Host)
+		if r.Host != "10.77.0.2:8443" {
+			http.Error(w, "unexpected CONNECT destination", http.StatusBadGateway)
+			return
+		}
+		upstream, err := net.Dial("tcp", backend.Addr().String())
 		if err != nil {
 			_, _ = io.WriteString(rw, "HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n")
 			_ = rw.Flush()
