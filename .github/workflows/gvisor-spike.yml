@@ -1,0 +1,31 @@
+name: gVisor netstack spike
+
+on:
+  push:
+    paths:
+      - "experiments/gvisor/**"
+      - "internal/tunnel/**"
+      - "internal/proxytransport/**"
+      - ".github/workflows/gvisor-spike.yml"
+  pull_request:
+    paths:
+      - "experiments/gvisor/**"
+      - "internal/tunnel/**"
+      - "internal/proxytransport/**"
+      - ".github/workflows/gvisor-spike.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.3"
+          cache-dependency-path: experiments/gvisor/go.mod
+      - name: Resolve isolated module
+        working-directory: experiments/gvisor
+        run: go mod tidy
+      - name: Test packet-to-stream bridge
+        working-directory: experiments/gvisor
+        run: go test -race -count=1 ./...
