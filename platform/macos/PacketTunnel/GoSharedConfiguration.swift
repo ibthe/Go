@@ -104,7 +104,7 @@ enum GoSharedConfiguration {
             guard Set(raw.keys).isSubset(of: allowedKeys),
                   let identifier = raw["id"] as? String,
                   !identifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                  !identifier.contains("\\n"), !identifier.contains("\\r"),
+                  !identifier.contains("\n"), !identifier.contains("\r"),
                   identifiers.insert(identifier).inserted,
                   let endpoint = raw["endpoint"] as? String,
                   let components = URLComponents(string: endpoint),
@@ -165,7 +165,7 @@ enum SharedConfigurationError: LocalizedError {
         case .fileProtectionFailed:
             return "The shared configuration file permissions are not sufficiently restrictive."
         case .missingCredentials(let proxyID):
-            return "Credentials are missing from Keychain for proxy ID: \\(proxyID)."
+            return "Credentials are missing from Keychain for proxy ID: \(proxyID)."
         }
     }
 }
