@@ -1,0 +1,34 @@
+name: Proxy endpoint audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/audit-proxy-endpoints.sh'
+      - 'cmd/go/**'
+      - 'internal/proxycheck/**'
+      - '.github/workflows/proxy-endpoint-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - name: Probe supplied endpoints
+        run: bash scripts/audit-proxy-endpoints.sh
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proxy-endpoint-audit
+          path: proxy-audit-report.txt
+          if-no-files-found: warn
+          retention-days: 7
