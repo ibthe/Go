@@ -118,8 +118,15 @@ func (c Config) Validate() error {
 // Resolve expands credential references from the process environment. The
 // returned URLs contain credentials only in memory and must never be logged.
 func (c Config) Resolve(getenv func(string) (string, bool)) ([]ResolvedProxy, error) {
-	if getenv == nil {
-		return nil, errors.New("environment lookup is required")
+	return c.ResolveWithLookup(getenv)
+}
+
+// ResolveWithLookup resolves credential references through a caller-provided
+// lookup. Platform bridges can provide Keychain-backed values without placing
+// secrets in process environment variables.
+func (c Config) ResolveWithLookup(lookup func(string) (string, bool)) ([]ResolvedProxy, error) {
+	if lookup == nil {
+		return nil, errors.New("credential lookup is required")
 	}
 	if err := c.Validate(); err != nil {
 		return nil, err
@@ -128,8 +135,8 @@ func (c Config) Resolve(getenv func(string) (string, bool)) ([]ResolvedProxy, er
 	for _, p := range c.Proxies {
 		u, _ := url.Parse(p.Endpoint) // Validate has already checked this URL.
 		if p.UsernameEnv != "" {
-			username, okUser := getenv(p.UsernameEnv)
-			password, okPass := getenv(p.PasswordEnv)
+			username, okUser := lookup(p.UsernameEnv)
+			password, okPass := lookup(p.PasswordEnv)
 			if !okUser || !okPass {
 				return nil, fmt.Errorf("proxy %q: credential environment variables are not set", p.ID)
 			}
