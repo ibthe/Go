@@ -28,16 +28,7 @@ enum GoSharedConfiguration {
         guard !data.isEmpty, data.count <= maximumSize else {
             throw SharedConfigurationError.invalidConfigurationSize
         }
-        let envelope = try JSONDecoder().decode(FileEnvelope.self, from: data)
-        guard !envelope.proxies.isEmpty else {
-            throw SharedConfigurationError.invalidConfiguration
-        }
-        for proxy in envelope.proxies {
-            guard !proxy.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                  (proxy.usernameEnv == nil) == (proxy.passwordEnv == nil) else {
-                throw SharedConfigurationError.invalidConfiguration
-            }
-        }
+        _ = try decodeEnvelope(data)
 
         let directory = try containerURL().appendingPathComponent(directoryName, isDirectory: true)
         try FileManager.default.createDirectory(
@@ -83,7 +74,7 @@ enum GoSharedConfiguration {
         guard data.count <= maximumSize else {
             throw SharedConfigurationError.invalidConfigurationSize
         }
-        let envelope = try JSONDecoder().decode(FileEnvelope.self, from: data)
+        let envelope = try decodeEnvelope(data)
         var values: [String: String] = [:]
         for proxy in envelope.proxies {
             guard let usernameKey = proxy.usernameEnv,
@@ -95,6 +86,55 @@ enum GoSharedConfiguration {
             values[passwordKey] = credentials.password
         }
         return values
+    }
+
+    private static func decodeEnvelope(_ data: Data) throws -> FileEnvelope {
+        guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              Set(root.keys) == Set(["proxies"]),
+              let rawProxies = root["proxies"] as? [[String: Any]],
+              !rawProxies.isEmpty else {
+            throw SharedConfigurationError.invalidConfiguration
+        }
+
+        let allowedKeys: Set<String> = ["id", "endpoint", "username_env", "password_env"]
+        var identifiers = Set<String>()
+        var credentialReferences = Set<String>()
+
+        for raw in rawProxies {
+            guard Set(raw.keys).isSubset(of: allowedKeys),
+                  let identifier = raw["id"] as? String,
+                  !identifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  !identifier.contains("\\n"), !identifier.contains("\\r"),
+                  identifiers.insert(identifier).inserted,
+                  let endpoint = raw["endpoint"] as? String,
+                  let components = URLComponents(string: endpoint),
+                  components.scheme == "https",
+                  let host = components.host, !host.isEmpty,
+                  let port = components.port, (1...65535).contains(port),
+                  components.user == nil, components.password == nil,
+                  components.path.isEmpty || components.path == "/",
+                  components.query == nil, components.fragment == nil else {
+                throw SharedConfigurationError.invalidConfiguration
+            }
+
+            let hasUsername = raw.keys.contains("username_env")
+            let hasPassword = raw.keys.contains("password_env")
+            guard hasUsername == hasPassword else {
+                throw SharedConfigurationError.invalidConfiguration
+            }
+            if hasUsername {
+                guard let usernameKey = raw["username_env"] as? String,
+                      let passwordKey = raw["password_env"] as? String,
+                      usernameKey.range(of: "^[A-Za-z_][A-Za-z0-9_]*$", options: .regularExpression) != nil,
+                      passwordKey.range(of: "^[A-Za-z_][A-Za-z0-9_]*$", options: .regularExpression) != nil,
+                      credentialReferences.insert(usernameKey).inserted,
+                      credentialReferences.insert(passwordKey).inserted else {
+                    throw SharedConfigurationError.invalidConfiguration
+                }
+            }
+        }
+
+        return try JSONDecoder().decode(FileEnvelope.self, from: data)
     }
 
     private static func containerURL() throws -> URL {
