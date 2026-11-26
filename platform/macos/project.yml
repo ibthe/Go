@@ -1,0 +1,54 @@
+name: Go
+options:
+  bundleIdPrefix: app.go
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    CODE_SIGNING_ALLOWED: "NO"
+
+targets:
+  Go:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.go.macos
+        PRODUCT_NAME: Go
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Go
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+    dependencies:
+      - target: GoPacketTunnelExtension
+        embed: true
+
+  GoPacketTunnelExtension:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: PacketTunnel
+        excludes:
+          - Info.plist
+          - "*.entitlements"
+          - README.md
+    info:
+      path: PacketTunnel/Info.plist
+    entitlements:
+      path: PacketTunnel/GoPacketTunnel.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.go.macos.PacketTunnel
+        PRODUCT_NAME: GoPacketTunnel
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+    dependencies:
+      - framework: ../../build/macos/GoPacketEngine.xcframework
+        embed: true
+        codeSign: true
