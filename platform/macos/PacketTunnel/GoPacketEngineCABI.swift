@@ -66,7 +66,8 @@ final class GoPacketEngineCABI: GoPacketEngine {
     private let readQueue = DispatchQueue(label: "app.go.packet-engine.reader")
     private var running = false
     private var outputHandler: ((PacketTunnelPacket) -> Void)?
-    private let readerStopped = DispatchSemaphore(value: 0)
+    private let readerGroup = DispatchGroup()
+    private var failureHandler: ((Error) -> Void)?
 
     init?(proxyConfigPath: String, timeoutMillis: Int32 = 10_000) {
         guard timeoutMillis > 0 else { return nil }
@@ -80,6 +81,12 @@ final class GoPacketEngineCABI: GoPacketEngine {
     func setPacketOutputHandler(_ handler: @escaping (PacketTunnelPacket) -> Void) {
         stateLock.lock()
         outputHandler = handler
+        stateLock.unlock()
+    }
+
+    func setFailureHandler(_ handler: @escaping (Error) -> Void) {
+        stateLock.lock()
+        failureHandler = handler
         stateLock.unlock()
     }
 
@@ -98,8 +105,10 @@ final class GoPacketEngineCABI: GoPacketEngine {
         }
         running = true
 
-        readQueue.async { [weak self] in
-            self?.readPackets()
+        readerGroup.enter()
+        readQueue.async { [self] in
+            defer { readerGroup.leave() }
+            readPackets()
         }
     }
 
@@ -142,9 +151,8 @@ final class GoPacketEngineCABI: GoPacketEngine {
 
         guard wasRunning else { return }
         _ = goEngineStop(handle)
-        // The C read call has a bounded 200 ms wait and is released by Stop.
-        // Join it before deleting the cgo handle.
-        readerStopped.wait()
+        // Stop releases a blocked C read. Join the reader before deleting the cgo handle.
+        readerGroup.wait()
     }
 
     deinit {
@@ -153,7 +161,6 @@ final class GoPacketEngineCABI: GoPacketEngine {
     }
 
     private func readPackets() {
-        defer { readerStopped.signal() }
         var buffer = [UInt8](repeating: 0, count: 65535)
 
         while isRunning {
@@ -193,12 +200,9 @@ final class GoPacketEngineCABI: GoPacketEngine {
 
     private func deliverFailure(_ error: Error) {
         stateLock.lock()
-        let handler = outputHandler
-        running = false
+        let handler = failureHandler
         stateLock.unlock()
-        // Surface the failure through the normal packet-output path only via
-        // the adapter's failure handler; no packet data or destinations leak.
-        _ = handler
+        handler?(error)
     }
 }
 
