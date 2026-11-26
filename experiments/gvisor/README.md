@@ -24,8 +24,9 @@ go mod tidy
 go test -race -count=1 ./...
 ```
 
-## What the first test proves
+## What the tests prove
 
-`TestIPv4TCPFlowBridgesIntoGoRelay` creates two independent in-memory gVisor IPv4/TCP stacks. Their channel link endpoints exchange actual IP packets. A TCP connection is established through that packet exchange; the server accepts it as a `net.Conn`; the Go tunnel relay maps the accepted flow's local destination address to an HTTPS CONNECT request; and a local TLS CONNECT fixture forwards the stream to a TCP echo backend.
+- `TestIPv4TCPFlowBridgesIntoGoRelay` creates two independent in-memory gVisor IPv4/TCP stacks. Their channel link endpoints exchange actual IP packets. A TCP connection is established through that packet exchange; the server accepts it as a `net.Conn`; the Go tunnel relay maps the accepted flow's local destination address to an HTTPS CONNECT request; and a local TLS CONNECT fixture forwards the stream to a TCP echo backend.
+- `TestIPv6TCPFlowBridgesIntoGoRelay` repeats the packet-to-stream path over IPv6 and verifies that the relay preserves the original bracketed IPv6 destination (`[fd77::2]:8443`). It uses an in-memory stream dialer to isolate and test the IPv6 destination mapping.
 
-This validates the packet-to-stream boundary and the CONNECT integration in a controlled environment. It does **not** yet validate Apple's `NEPacketTunnelFlow`, a real TUN descriptor, IPv6, UDP, DNS policy, system routing, or production performance.
+Together, these tests validate IPv4/IPv6 packet-to-stream handling and the IPv4 CONNECT integration in a controlled environment. They do **not** yet validate Apple's `NEPacketTunnelFlow`, a real TUN descriptor, UDP, DNS policy, system routing, or production performance.
