@@ -9,6 +9,41 @@
     {
       "id": "fastproxy-compatible-2",
       "endpoint": "https://backup.example.invalid:443"
+    },
+    {
+      "id": "candidate-main-ip",
+      "endpoint": "https://23.237.103.44:8443",
+      "disabled": true
+    },
+    {
+      "id": "candidate-main-host",
+      "endpoint": "https://ff.s1.redirtry.top:8443",
+      "disabled": true
+    },
+    {
+      "id": "candidate-backup-ip-1",
+      "endpoint": "https://162.244.81.74:8443",
+      "disabled": true
+    },
+    {
+      "id": "candidate-backup-ip-2",
+      "endpoint": "https://162.244.81.207:8443",
+      "disabled": true
+    },
+    {
+      "id": "candidate-youtube-ip",
+      "endpoint": "https://23.237.103.46:8443",
+      "disabled": true
+    },
+    {
+      "id": "candidate-youtube-host",
+      "endpoint": "https://ff.y1.redirtry.top:8443",
+      "disabled": true
+    },
+    {
+      "id": "candidate-google-play",
+      "endpoint": "https://de26.staticvaultcdn.xyz:443",
+      "disabled": true
     }
   ]
 }
