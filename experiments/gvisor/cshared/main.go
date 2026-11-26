@@ -3,6 +3,7 @@ package main
 /*
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 */
 import "C"
 
@@ -41,10 +42,10 @@ func GoEngineCreateWithCredentials(configPath *C.char, credentialsJSON *C.char, 
 	if configPath == nil || credentialsJSON == nil || timeoutMillis < 1 {
 		return 0
 	}
-	raw := C.GoString(credentialsJSON)
-	if len(raw) > 64*1024 {
+	if C.strnlen(credentialsJSON, 64*1024+1) > 64*1024 {
 		return 0
 	}
+	raw := C.GoString(credentialsJSON)
 	decoder := json.NewDecoder(strings.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	var credentials map[string]string
