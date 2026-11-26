@@ -5,8 +5,9 @@ This directory contains the first native boundary for Apple's Network Extension 
 ## Current state
 
 - `PacketTunnelFlowAdapter.swift` owns the asynchronous `NEPacketTunnelFlow` read/write loop.
+- `GoPacketEngineCABI.swift` implements the Go packet-engine C ABI with Swift-owned buffers, a bounded output reader, and joined shutdown.
 - The adapter passes complete IP packets and their address-family metadata to a `GoPacketEngine` implementation.
-- The gVisor-backed processor exists only in the isolated `experiments/gvisor` module; it is not exported through a C ABI or bundled into the app.
+- The gVisor-backed processor exists only in the isolated `experiments/gvisor` module and is exported through a C ABI. The native shared library is not yet linked into an app target.
 - `ProxyCredentialStore.swift` provides a Keychain-backed helper for proxy usernames/passwords, but no app target or settings UI calls it yet.
 - The `NEPacketTunnelProvider` lifecycle owner is **not wired yet**.
 - This source is not a runnable VPN and does not install routes or claim to capture device traffic.
@@ -25,4 +26,4 @@ The Go implementation must treat packets as IP-layer data (no Ethernet header), 
 
 ## Validation still required
 
-The Swift sources are type-checked in macOS CI against the runner's Apple SDK. They have not been exercised inside a signed Network Extension target or installed on a device. The next integration step is a concrete Go engine bridge (likely a narrow C ABI or cgo wrapper) plus an Xcode Packet Tunnel target with the Network Extension entitlement.
+The Swift sources are type-checked in macOS CI against the runner's Apple SDK. The C ABI wrapper is source-integrated but has not yet been linked against the generated c-shared library, exercised inside a signed Network Extension target, or installed on a device. The next integration step is an Xcode Packet Tunnel target with the Network Extension entitlement, generated C header/module map, and packaged Go dylib.
