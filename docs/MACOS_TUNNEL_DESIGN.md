@@ -2,9 +2,9 @@
 
 ## Status
 
-The transport-side TCP relay is implemented and covered by unit and end-to-end tests. `internal/tunnel.RelayAcceptedTCP` now maps an accepted TCP connection's peer address to the HTTPS CONNECT destination, while `RelayTCP` handles bidirectional stream copying and lifecycle. This is the adapter boundary a userspace IP stack can call.
+The transport-side TCP relay is implemented and covered by unit and HTTPS CONNECT integration tests. `internal/tunnel.RelayAcceptedTCP` maps an accepted flow's **local** address (the original destination IP:port) to the outbound CONNECT destination; its remote address is the originating client and must not be used for routing.
 
-The packet-to-flow engine and macOS Network Extension are not implemented. This repository does not yet contain a working macOS VPN.
+An isolated gVisor experiment now lives in `experiments/gvisor`, with its own Go module and a pinned upstream revision. Its first test connects two in-memory gVisor IPv4/TCP stacks, transfers packets between their channel endpoints, accepts the resulting TCP flow as `net.Conn`, and passes it through the Go relay to a test backend. A dedicated workflow uses the newer Go toolchain required by gVisor. This remains a prototype, not the production packet engine.
 
 ## Why a packet-to-stream adapter is required
 
@@ -96,4 +96,4 @@ The macOS target requires the Network Extension packet-tunnel entitlement, an Ap
 
 ## Next implementation milestone
 
-Build the gVisor compatibility spike as an isolated Go module, pinned to an exact upstream revision and kept out of the production dependency graph. Prove packet injection, TCP forwarding through `RelayAcceptedTCP`, response packet emission, and shutdown in CI before adding the Swift Packet Tunnel Provider target and its signing configuration.
+Complete the gVisor spike by verifying packet checksums, packet ownership, connection resets, half-close, cancellation, and IPv6; then replace the in-memory peer with a packet endpoint adapter suitable for Swift's `NEPacketTunnelFlow`. Keep gVisor isolated until its API and performance are validated. Only then add the Swift Packet Tunnel Provider target and signing configuration.
