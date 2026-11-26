@@ -19,6 +19,7 @@ import (
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
+	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -33,11 +34,12 @@ const (
 	mtu   = 1500
 )
 
-func newStack(t *testing.T, address [4]byte) (*stack.Stack, *channel.Endpoint) {
+func newStack(t *testing.T, address [4]byte, mac string, peerAddress [4]byte, peerMAC string) (*stack.Stack, *channel.Endpoint) {
 	t.Helper()
-	link := channel.New(1024, mtu, "")
+	link := channel.New(1024, mtu, tcpip.LinkAddress(mac))
+	link.LinkEPCapabilities = stack.CapabilityResolutionRequired
 	s := stack.New(stack.Options{
-		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol},
+		NetworkProtocols:   []stack.NetworkProtocolFactory{arp.NewProtocol, ipv4.NewProtocol},
 		TransportProtocols: []stack.TransportProtocolFactory{tcp.NewProtocol},
 	})
 	if err := s.CreateNIC(nicID, link); err != nil {
@@ -64,6 +66,10 @@ func newStack(t *testing.T, address [4]byte) (*stack.Stack, *channel.Endpoint) {
 		t.Fatalf("create test subnet: %v", err)
 	}
 	s.SetRouteTable([]tcpip.Route{{Destination: subnet, NIC: nicID}})
+	if err := s.AddStaticNeighbor(nicID, ipv4.ProtocolNumber, tcpip.AddrFrom4(peerAddress), tcpip.LinkAddress(peerMAC)); err != nil {
+		s.Destroy()
+		t.Fatalf("add static peer neighbor: %s", err)
+	}
 	return s, link
 }
 
@@ -80,7 +86,7 @@ func bridgePackets(ctx context.Context, a, b *channel.Endpoint) func() (uint64, 
 				return
 			}
 			count.Add(1)
-			dst.InjectInbound(ipv4.ProtocolNumber, pkt)
+			dst.InjectInbound(pkt.NetworkProtocolNumber, pkt)
 		}
 	}
 	go pump(a, b, &aToB)
@@ -93,8 +99,8 @@ func bridgePackets(ctx context.Context, a, b *channel.Endpoint) func() (uint64, 
 }
 
 func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
-	serverStack, serverLink := newStack(t, [4]byte{10, 77, 0, 2})
-	clientStack, clientLink := newStack(t, [4]byte{10, 77, 0, 1})
+	serverStack, serverLink := newStack(t, [4]byte{10, 77, 0, 2}, "\x02\x00\x00\x00\x00\x02", [4]byte{10, 77, 0, 1}, "\x02\x00\x00\x00\x00\x01")
+	clientStack, clientLink := newStack(t, [4]byte{10, 77, 0, 1}, "\x02\x00\x00\x00\x00\x01", [4]byte{10, 77, 0, 2}, "\x02\x00\x00\x00\x00\x02")
 	ctx, cancel := context.WithCancel(context.Background())
 	waitBridge := bridgePackets(ctx, clientLink, serverLink)
 	t.Cleanup(func() {
