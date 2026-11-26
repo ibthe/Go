@@ -8,22 +8,23 @@ import (
 )
 
 // RelayAcceptedTCP forwards an accepted TCP connection to the peer address
-// represented by inbound.RemoteAddr. This is the adapter boundary for a
-// userspace IP stack's accepted TCP connections: the stack owns packet parsing,
+// represented by inbound.LocalAddr. For an accepted inbound flow, LocalAddr
+// is the original packet destination; RemoteAddr is the source peer. This is
+// the adapter boundary for a userspace IP stack's accepted TCP connections:
 // TCP state and packet emission, while RelayAcceptedTCP owns the outbound
 // CONNECT stream and byte relay.
 func RelayAcceptedTCP(ctx context.Context, inbound net.Conn, dialer ContextDialer) (RelayStats, error) {
 	if inbound == nil {
 		return RelayStats{}, errors.New("inbound connection is required")
 	}
-	remote := inbound.RemoteAddr()
-	if remote == nil {
+	destination := inbound.LocalAddr()
+	if destination == nil {
 		_ = inbound.Close()
-		return RelayStats{}, errors.New("inbound remote address is required")
+		return RelayStats{}, errors.New("inbound local destination address is required")
 	}
-	if _, ok := remote.(*net.TCPAddr); !ok {
+	if _, ok := destination.(*net.TCPAddr); !ok {
 		_ = inbound.Close()
-		return RelayStats{}, fmt.Errorf("inbound remote address must be TCP, got %T", remote)
+		return RelayStats{}, fmt.Errorf("inbound local destination address must be TCP, got %T", destination)
 	}
-	return RelayTCP(ctx, inbound, dialer, remote.String())
+	return RelayTCP(ctx, inbound, dialer, destination.String())
 }
