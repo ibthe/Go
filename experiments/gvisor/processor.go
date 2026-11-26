@@ -125,7 +125,7 @@ func (p *GVisorProcessor) ProcessPacket(packet []byte, family packetengine.Famil
 		p.mu.RUnlock()
 		return errors.New("gVisor processor is not running")
 	}
-	s, mtu := p.stack, p.mtu
+	mtu := p.mtu
 	p.mu.RUnlock()
 
 	if len(packet) == 0 || len(packet) > mtu {
