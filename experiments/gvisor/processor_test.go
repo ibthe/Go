@@ -98,7 +98,7 @@ func TestGVisorProcessorConnectsPacketEngineToTCPDialer(t *testing.T) {
 				pumpDone <- errors.New("unexpected output family")
 				return
 			}
-			clientStack.InjectInbound(inbound.NetworkProtocolNumber, inbound)
+			clientLink.InjectInbound(inbound.NetworkProtocolNumber, inbound)
 		}
 	}()
 
