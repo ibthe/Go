@@ -20,15 +20,12 @@ This is required because TCP responses and proxy payloads are often generated
 after the input packet call has returned. Fake-processor tests cover lifecycle,
 family validation, asynchronous output, queue overflow, and buffer ownership.
 
-This is intentionally not a concrete packet engine: it does not parse or
-forward TCP or import gVisor. The native bridge must translate Darwin
+The root contract remains stack-independent. The concrete `GVisorProcessor` prototype lives in the isolated `experiments/gvisor` module (Go 1.27.3) and implements that contract. It installs a TCP SYN forwarder, turns accepted flows into `net.Conn`, relays them through an injected `tunnel.ContextDialer` (normally `proxypool.Pool`), and emits complete IPv4/IPv6 packets asynchronously. The native bridge must translate Darwin
 `AF_INET`/`AF_INET6` values to the package's normalized family values. The
 Swift adapter now accepts asynchronous output callbacks from the Go engine
 and writes those packets back through `NEPacketTunnelFlow`; it no longer
 assumes response packets are available synchronously during input processing.
-The next step is to implement a gVisor-backed Processor in an integration
-module compatible with the pinned gVisor toolchain, then expose it through a
-small C ABI and exercise the full Swift-to-Go round trip. Do not enable system
+The next step is to expose the isolated processor through a small C ABI and exercise the full Swift-to-Go round trip. The Keychain helper must also be wired to the app's proxy configuration flow. Do not enable system
 routes until that end-to-end path and UDP/DNS limitations are explicitly
 handled.
 
