@@ -28,7 +28,7 @@ func (d *echoDialer) DialContext(ctx context.Context, network, address string) (
 	client, server := net.Pipe()
 	go func() {
 		defer server.Close()
-		_, _ = io.Copy(server, server)
+		_, _ = io.Copy(server, client)
 	}()
 	return client, nil
 }
