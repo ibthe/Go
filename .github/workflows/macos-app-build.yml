@@ -6,12 +6,20 @@ on:
     paths:
       - "platform/macos/**"
       - "scripts/build-macos-go-library.sh"
+      - "experiments/gvisor/**"
+      - "internal/**"
+      - "go.mod"
+      - "go.sum"
       - ".github/workflows/macos-app-build.yml"
   pull_request:
     branches: [main]
     paths:
       - "platform/macos/**"
       - "scripts/build-macos-go-library.sh"
+      - "experiments/gvisor/**"
+      - "internal/**"
+      - "go.mod"
+      - "go.sum"
       - ".github/workflows/macos-app-build.yml"
 
 permissions:
