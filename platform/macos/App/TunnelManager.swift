@@ -87,7 +87,10 @@ final class TunnelManager: ObservableObject {
 
     func saveCredential(proxyID: String, username: String, password: String) throws {
         let identifier = proxyID.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !identifier.isEmpty, !username.isEmpty, !password.isEmpty else {
+        guard !identifier.isEmpty, !username.isEmpty, !password.isEmpty,
+              identifier.utf8.count <= 256,
+              username.utf8.count <= 16 * 1024,
+              password.utf8.count <= 16 * 1024 else {
             throw TunnelManagerError.invalidCredential
         }
         try ProxyCredentialStore().save(
