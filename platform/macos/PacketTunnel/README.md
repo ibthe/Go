@@ -19,7 +19,7 @@ The future `NEPacketTunnelProvider` must:
 4. Call `stop` from `stopTunnel(with:completionHandler:)`, then complete the provider shutdown.
 5. Configure only routes and address families that the Go engine can actually process.
 
-The Go implementation must treat packets as IP-layer data (no Ethernet header), preserve IPv4/IPv6 family information, return zero or more complete IP packets, honor MTU limits, and avoid logging packet contents or destinations. A processing error drops that packet; it must never trigger direct-network fallback.
+The Go implementation must treat packets as IP-layer data (no Ethernet header), preserve IPv4/IPv6 family information, process inbound packets synchronously, emit outbound packets asynchronously (TCP replies may arrive later), honor MTU limits, and avoid logging packet contents or destinations. A processing error drops that packet; it must never trigger direct-network fallback.
 
 ## Validation still required
 
