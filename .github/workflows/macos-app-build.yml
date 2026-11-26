@@ -45,10 +45,30 @@ jobs:
         working-directory: platform/macos
         run: xcodebuild -project Go.xcodeproj -scheme Go -configuration Debug -destination 'platform=macOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO
 
-      - name: Upload unsigned development app
+      - name: Package unsigned macOS app
+        working-directory: platform/macos
+        run: |
+          mkdir -p build/package
+          ditto -c -k --sequesterRsrc --keepParent build/DerivedData/Build/Products/Debug/Go.app build/package/Go-macOS-unsigned.zip
+          cat > build/package/INSTALL.txt <<'EOF'
+          Go for macOS — unsigned development build
+
+          1. Unzip Go-macOS-unsigned.zip.
+          2. Move Go.app to Applications.
+          3. Control-click Go.app and choose Open. Confirm Open in the macOS dialog.
+          4. This unsigned build is for opening the app shell only.
+
+          IMPORTANT: The Packet Tunnel extension is not provisioned or signed.
+          Connect is not a working system VPN yet. The provider installs no
+          included traffic routes. Do not rely on this build for privacy or
+          traffic protection.
+          EOF
+      - name: Upload unsigned development package
         uses: actions/upload-artifact@v4
         with:
-          name: go-macos-unsigned-development-build
-          path: platform/macos/build/DerivedData/Build/Products/Debug/Go.app
+          name: go-macos-download-package
+          path: |
+            platform/macos/build/package/Go-macOS-unsigned.zip
+            platform/macos/build/package/INSTALL.txt
           if-no-files-found: error
           retention-days: 14
