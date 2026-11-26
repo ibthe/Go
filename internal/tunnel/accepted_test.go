@@ -14,7 +14,7 @@ func TestRelayAcceptedTCPUsesOriginalPeerAddress(t *testing.T) {
 	outboundClient, outboundServer := tcpPair(t)
 	defer outboundServer.Close()
 
-	wantDestination := inboundClient.LocalAddr().String()
+	wantDestination := inboundRelay.LocalAddr().String()
 	gotDestination := make(chan string, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	dialer := fixedDialer{dial: func(_ context.Context, network, address string) (net.Conn, error) {
