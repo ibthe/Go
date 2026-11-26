@@ -17,6 +17,10 @@ targets:
     platform: macOS
     sources:
       - path: App
+      - path: PacketTunnel/ProxyCredentialStore.swift
+      - path: PacketTunnel/GoSharedConfiguration.swift
+    entitlements:
+      path: App/Go.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.go.macos
@@ -24,6 +28,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Go
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_GoKeychainAccessGroup: "$(AppIdentifierPrefix)app.go.shared-keychain"
     dependencies:
       - target: GoPacketTunnelExtension
         embed: true
@@ -45,6 +50,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.go.macos.PacketTunnel
         PRODUCT_NAME: GoPacketTunnel
+        INFOPLIST_KEY_GoKeychainAccessGroup: "$(AppIdentifierPrefix)app.go.shared-keychain"
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
