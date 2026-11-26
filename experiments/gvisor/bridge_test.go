@@ -131,7 +131,7 @@ func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 	listener, err := gonet.ListenTCP(serverStack, tcpip.FullAddress{
 		Addr: tcpip.AddrFrom4([4]byte{10, 77, 0, 2}),
 		Port: 8443,
-	})
+	}, ipv4.ProtocolNumber)
 	if err != nil {
 		t.Fatalf("listen on userspace stack: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 	clientConn, err := gonet.DialContextTCP(ctx, clientStack, tcpip.FullAddress{
 		Addr: tcpip.AddrFrom4([4]byte{10, 77, 0, 2}),
 		Port: 8443,
-	})
+	}, ipv4.ProtocolNumber)
 	if err != nil {
 		t.Fatalf("dial through client userspace stack: %v", err)
 	}
