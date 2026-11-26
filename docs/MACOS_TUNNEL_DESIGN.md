@@ -12,14 +12,20 @@ A first native boundary has also been added at `platform/macos/PacketTunnel/Pack
 
 The root Go module now contains `internal/packetengine`, a stack-independent
 lifecycle and packet-validation boundary. It normalizes address families to
-IPv4/IPv6 enum values, validates IP version and MTU, serializes access to the
-underlying processor, and copies buffers at the boundary. Its fake-processor
-tests cover lifecycle, family validation, malformed output, and buffer
-ownership.
+IPv4/IPv6 enum values, validates IP version and MTU, serializes input packet
+processing and lifecycle transitions, and copies buffers at the boundary.
+Crucially, input processing is synchronous while output is event-driven: the
+stack emits packets through a callback and the adapter drains them separately.
+This is required because TCP responses and proxy payloads are often generated
+after the input packet call has returned. Fake-processor tests cover lifecycle,
+family validation, asynchronous output, queue overflow, and buffer ownership.
 
 This is intentionally not a concrete packet engine: it does not parse or
-forward TCP, emit packets, or import gVisor. The native bridge must translate
-Darwin `AF_INET`/`AF_INET6` values to the package's normalized family values.
+forward TCP or import gVisor. The native bridge must translate Darwin
+`AF_INET`/`AF_INET6` values to the package's normalized family values. The
+Swift adapter now accepts asynchronous output callbacks from the Go engine
+and writes those packets back through `NEPacketTunnelFlow`; it no longer
+assumes response packets are available synchronously during input processing.
 The next step is to implement a gVisor-backed Processor in an integration
 module compatible with the pinned gVisor toolchain, then expose it through a
 small C ABI and exercise the full Swift-to-Go round trip. Do not enable system
