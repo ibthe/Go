@@ -8,6 +8,24 @@ An isolated gVisor experiment now lives in `experiments/gvisor`, with its own Go
 
 A first native boundary has also been added at `platform/macos/PacketTunnel/PacketTunnelFlowAdapter.swift`. It pumps complete IP packets between `NEPacketTunnelFlow` and a `GoPacketEngine` protocol, serializes packet processing, and drops packets on engine errors rather than bypassing the tunnel. It is deliberately not yet wired to a Go implementation or a signed `NEPacketTunnelProvider` target.
 
+## Platform-neutral Go packet engine boundary
+
+The root Go module now contains `internal/packetengine`, a stack-independent
+lifecycle and packet-validation boundary. It normalizes address families to
+IPv4/IPv6 enum values, validates IP version and MTU, serializes access to the
+underlying processor, and copies buffers at the boundary. Its fake-processor
+tests cover lifecycle, family validation, malformed output, and buffer
+ownership.
+
+This is intentionally not a concrete packet engine: it does not parse or
+forward TCP, emit packets, or import gVisor. The native bridge must translate
+Darwin `AF_INET`/`AF_INET6` values to the package's normalized family values.
+The next step is to implement a gVisor-backed Processor in an integration
+module compatible with the pinned gVisor toolchain, then expose it through a
+small C ABI and exercise the full Swift-to-Go round trip. Do not enable system
+routes until that end-to-end path and UDP/DNS limitations are explicitly
+handled.
+
 ## Why a packet-to-stream adapter is required
 
 Apple's `NEPacketTunnelProvider` receives IP packets from `NEPacketTunnelFlow`. The current Go `proxytransport.Dialer` accepts a destination and creates a TCP byte stream through an HTTPS CONNECT proxy. These are different abstraction levels: a packet tunnel cannot pass an IP packet directly to `DialContext`.
