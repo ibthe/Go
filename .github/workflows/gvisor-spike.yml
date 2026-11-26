@@ -5,6 +5,9 @@ on:
     paths:
       - "experiments/gvisor/**"
       - "internal/tunnel/**"
+      - "internal/packetengine/**"
+      - "internal/proxyconfig/**"
+      - "internal/proxypool/**"
       - "internal/proxytransport/**"
       - ".github/workflows/gvisor-spike.yml"
   pull_request:
