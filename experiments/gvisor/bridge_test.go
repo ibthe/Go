@@ -5,10 +5,14 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"io"
-	"fmt"
 	"net"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -130,12 +134,12 @@ func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 		}
 		upstream, err := net.Dial("tcp", r.Host)
 		if err != nil {
-			_, _ = io.WriteString(rw, "HTTP/1.1 502 Bad Gateway\\r\\nConnection: close\\r\\n\\r\\n")
+			_, _ = io.WriteString(rw, "HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n")
 			_ = rw.Flush()
 			_ = clientConn.Close()
 			return
 		}
-		if _, err := io.WriteString(rw, "HTTP/1.1 200 Connection Established\\r\\n\\r\\n"); err != nil {
+		if _, err := io.WriteString(rw, "HTTP/1.1 200 Connection Established\r\n\r\n"); err != nil {
 			_ = clientConn.Close()
 			_ = upstream.Close()
 			return
