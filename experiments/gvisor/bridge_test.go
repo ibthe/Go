@@ -19,6 +19,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 
+	"github.com/ibthe/Go/internal/proxytransport"
 	"github.com/ibthe/Go/internal/tunnel"
 )
 
@@ -83,12 +84,6 @@ func bridgePackets(ctx context.Context, a, b *channel.Endpoint) func() {
 	}
 }
 
-type dialFunc func(context.Context, string, string) (net.Conn, error)
-
-func (f dialFunc) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	return f(ctx, network, address)
-}
-
 func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 	serverStack, serverLink := newStack(t, [4]byte{10, 77, 0, 2})
 	clientStack, clientLink := newStack(t, [4]byte{10, 77, 0, 1})
@@ -114,19 +109,63 @@ func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 			}
 			go func() {
 				defer conn.Close()
-				buf := make([]byte, 4096)
-				for {
-					n, err := conn.Read(buf)
-					if n > 0 {
-						_, _ = conn.Write(buf[:n])
-					}
-					if err != nil {
-						return
-					}
-				}
+				_, _ = io.Copy(conn, conn)
 			}()
 		}
 	}()
+
+	proxy := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodConnect {
+			http.Error(w, "CONNECT required", http.StatusMethodNotAllowed)
+			return
+		}
+		hijacker, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "hijacking unsupported", http.StatusInternalServerError)
+			return
+		}
+		clientConn, rw, err := hijacker.Hijack()
+		if err != nil {
+			return
+		}
+		upstream, err := net.Dial("tcp", r.Host)
+		if err != nil {
+			_, _ = io.WriteString(rw, "HTTP/1.1 502 Bad Gateway\\r\\nConnection: close\\r\\n\\r\\n")
+			_ = rw.Flush()
+			_ = clientConn.Close()
+			return
+		}
+		if _, err := io.WriteString(rw, "HTTP/1.1 200 Connection Established\\r\\n\\r\\n"); err != nil {
+			_ = clientConn.Close()
+			_ = upstream.Close()
+			return
+		}
+		if err := rw.Flush(); err != nil {
+			_ = clientConn.Close()
+			_ = upstream.Close()
+			return
+		}
+		go func() {
+			_, _ = io.Copy(upstream, clientConn)
+			_ = upstream.Close()
+		}()
+		_, _ = io.Copy(clientConn, upstream)
+		_ = clientConn.Close()
+		_ = upstream.Close()
+	}))
+	defer proxy.Close()
+
+	proxyURL, err := url.Parse(proxy.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	roots := x509.NewCertPool()
+	roots.AddCert(proxy.Certificate())
+	dialer := &proxytransport.Dialer{
+		ProxyURL: proxyURL,
+		TLSConfig: &tls.Config{RootCAs: roots},
+		Timeout: 3 * time.Second,
+	}
 
 	listener, err := gonet.ListenTCP(serverStack, tcpip.FullAddress{
 		Addr: tcpip.AddrFrom4([4]byte{10, 77, 0, 2}),
@@ -144,17 +183,9 @@ func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 			relayDone <- err
 			return
 		}
-		_, err = tunnel.RelayAcceptedTCP(ctx, inbound, dialFunc(func(ctx context.Context, network, address string) (net.Conn, error) {
-			if network != "tcp" {
-				return nil, fmt.Errorf("unexpected network %q", network)
-			}
-			// RelayAcceptedTCP must use the destination address from the
-			// accepted flow, not the remote client's source address.
-			if address != "10.77.0.2:8443" {
-				return nil, fmt.Errorf("wrong original destination %q", address)
-			}
-			return (&net.Dialer{}).DialContext(ctx, "tcp", backend.Addr().String())
-		}))
+		// The CONNECT target must be the accepted flow's original local
+		// destination, not the client's source address.
+		_, err = tunnel.RelayAcceptedTCP(ctx, inbound, dialer)
 		relayDone <- err
 	}()
 
