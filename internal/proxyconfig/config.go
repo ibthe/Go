@@ -29,6 +29,7 @@ type Proxy struct {
 	Endpoint    string `json:"endpoint"`
 	UsernameEnv string `json:"username_env,omitempty"`
 	PasswordEnv string `json:"password_env,omitempty"`
+	Disabled    bool   `json:"disabled,omitempty"`
 }
 
 // ResolvedProxy contains credentials in memory for use by the transport layer.
@@ -142,6 +143,9 @@ func (c Config) ResolveWithLookup(lookup func(string) (string, bool)) ([]Resolve
 	}
 	out := make([]ResolvedProxy, 0, len(c.Proxies))
 	for _, p := range c.Proxies {
+		if p.Disabled {
+			continue
+		}
 		u, _ := url.Parse(p.Endpoint) // Validate has already checked this URL.
 		if p.UsernameEnv != "" {
 			username, okUser := lookup(p.UsernameEnv)
