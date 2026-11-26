@@ -6,7 +6,9 @@ This directory contains the first native boundary for Apple's Network Extension 
 
 - `PacketTunnelFlowAdapter.swift` owns the asynchronous `NEPacketTunnelFlow` read/write loop.
 - The adapter passes complete IP packets and their address-family metadata to a `GoPacketEngine` implementation.
-- The gVisor-backed processor exists only in the isolated `experiments/gvisor` module; it is not exported through a C ABI or bundled into the app.\n- `ProxyCredentialStore.swift` provides a Keychain-backed helper for proxy usernames/passwords, but no app target or settings UI calls it yet.\n- The `NEPacketTunnelProvider` lifecycle owner is **not wired yet**.
+- The gVisor-backed processor exists only in the isolated `experiments/gvisor` module; it is not exported through a C ABI or bundled into the app.
+- `ProxyCredentialStore.swift` provides a Keychain-backed helper for proxy usernames/passwords, but no app target or settings UI calls it yet.
+- The `NEPacketTunnelProvider` lifecycle owner is **not wired yet**.
 - This source is not a runnable VPN and does not install routes or claim to capture device traffic.
 
 ## Integration contract
