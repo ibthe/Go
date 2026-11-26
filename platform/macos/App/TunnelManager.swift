@@ -61,12 +61,15 @@ final class TunnelManager: ObservableObject {
             throw TunnelManagerError.configurationFileNotReadable
         }
 
+        _ = try GoSharedConfiguration.installConfiguration(from: URL(fileURLWithPath: path))
+
         let target = manager ?? NETunnelProviderManager()
         let tunnelProtocol = NETunnelProviderProtocol()
         tunnelProtocol.providerBundleIdentifier = providerBundleIdentifier
         tunnelProtocol.serverAddress = "Go local packet tunnel"
         tunnelProtocol.providerConfiguration = [
-            "proxyConfigPath": path,
+            "appGroupIdentifier": GoSharedConfiguration.appGroupIdentifier,
+            "configFileName": GoSharedConfiguration.fileName,
             "mtu": 1500,
             "connectTimeoutMillis": 10_000
         ]
@@ -79,6 +82,18 @@ final class TunnelManager: ObservableObject {
         manager = target
         status = target.connection.status
         isConfigured = true
+        lastError = nil
+    }
+
+    func saveCredential(proxyID: String, username: String, password: String) throws {
+        let identifier = proxyID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !identifier.isEmpty, !username.isEmpty, !password.isEmpty else {
+            throw TunnelManagerError.invalidCredential
+        }
+        try ProxyCredentialStore().save(
+            ProxyCredentials(username: username, password: password),
+            for: identifier
+        )
         lastError = nil
     }
 
@@ -105,6 +120,7 @@ final class TunnelManager: ObservableObject {
 enum TunnelManagerError: LocalizedError {
     case configurationFileNotReadable
     case profileNotConfigured
+    case invalidCredential
 
     var errorDescription: String? {
         switch self {
@@ -112,6 +128,8 @@ enum TunnelManagerError: LocalizedError {
             return "The proxy configuration file is not readable at this path."
         case .profileNotConfigured:
             return "Save a tunnel profile before connecting."
+        case .invalidCredential:
+            return "Proxy ID, username, and password are all required."
         }
     }
 }
