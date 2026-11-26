@@ -91,6 +91,7 @@ func (c Config) Validate() error {
 		return errors.New("at least one proxy must be configured")
 	}
 	seen := make(map[string]struct{}, len(c.Proxies))
+	credentialNames := make(map[string]string)
 	for i, p := range c.Proxies {
 		if strings.TrimSpace(p.ID) == "" || strings.ContainsAny(p.ID, "\r\n") {
 			return fmt.Errorf("proxy %d: id is required", i)
@@ -108,8 +109,16 @@ func (c Config) Validate() error {
 		if (p.UsernameEnv == "") != (p.PasswordEnv == "") {
 			return fmt.Errorf("proxy %q: username_env and password_env must be set together", p.ID)
 		}
-		if p.UsernameEnv != "" && (!envName.MatchString(p.UsernameEnv) || !envName.MatchString(p.PasswordEnv)) {
-			return fmt.Errorf("proxy %q: invalid credential environment variable name", p.ID)
+		if p.UsernameEnv != "" {
+			if !envName.MatchString(p.UsernameEnv) || !envName.MatchString(p.PasswordEnv) {
+				return fmt.Errorf("proxy %q: invalid credential environment variable name", p.ID)
+			}
+			for _, name := range []string{p.UsernameEnv, p.PasswordEnv} {
+				if previous, exists := credentialNames[name]; exists {
+					return fmt.Errorf("proxy %q: credential reference %q is already used by proxy %q", p.ID, name, previous)
+				}
+				credentialNames[name] = p.ID
+			}
 		}
 	}
 	return nil
