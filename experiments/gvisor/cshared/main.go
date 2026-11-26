@@ -9,7 +9,6 @@ import "C"
 import (
 	"context"
 	"errors"
-	"os"
 	"runtime/cgo"
 	"time"
 	"unsafe"
@@ -162,6 +161,4 @@ func safeValue(handle cgo.Handle) (value *bridge, ok bool) {
 }
 
 func main() {
-	// Required for -buildmode=c-shared.
-	_ = os.ErrNotExist
 }
