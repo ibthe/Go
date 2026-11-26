@@ -19,6 +19,15 @@ Set both variables or neither. The values are read at runtime and held in
 memory only; do not put usernames or passwords in the JSON file, command line,
 logs, or source control.
 
+In the macOS app, import the JSON file into the Go App Group container. Save
+credentials in Keychain using the matching proxy `id`; the app and packet
+tunnel extension share a dedicated Keychain access group. The extension maps
+the JSON environment-variable references to those Keychain values and passes
+the resulting map synchronously to the Go C ABI. Secret values are not written
+to the App Group file or the system VPN profile. This sharing requires a
+registered App Group, matching Keychain access-group entitlement, and signed
+provisioning profiles; unsigned CI cannot verify runtime access.
+
 On macOS and Linux, restrict the file to its owner:
 
 ```sh
@@ -30,7 +39,8 @@ chmod 600 proxies.json
 The shared core exposes:
 
 - `proxyconfig.Load(path)` to read and validate the file;
-- `Config.Resolve(os.LookupEnv)` to resolve credential references;
+- `Config.Resolve(os.LookupEnv)` for development environment variables;
+- `Config.ResolveWithLookup(func(string) (string, bool)` for platform secure-store bridges;
 - `proxypool.New(resolved, timeout)` to build a dialer with rotating start
   order and sequential failover.
 
