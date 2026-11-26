@@ -45,7 +45,16 @@ lipo -create \
   -output "$OUTPUT_DIR/libgo_packet_engine.dylib"
 
 lipo "$OUTPUT_DIR/libgo_packet_engine.dylib" -verify_arch arm64 x86_64
-nm -gU "$OUTPUT_DIR/libgo_packet_engine.dylib" | grep -E ' _GoEngine(Create|Start|ProcessIPVersion|ReadPacket|Stop|Destroy)$'
+nm -gU "$OUTPUT_DIR/libgo_packet_engine.dylib" | grep -E ' _GoEngine(Create|Start|ProcessIPVersion|ReadPacket|Stop|Destroy)
+
+# Package the universal dylib and generated header in the format Xcode can link.
+XCFRAMEWORK_PATH="$OUTPUT_DIR/GoPacketEngine.xcframework"
+rm -rf "$XCFRAMEWORK_PATH"
+xcodebuild -create-xcframework \
+  -library "$OUTPUT_DIR/libgo_packet_engine.dylib" \
+  -headers "$HEADER_PATH" \
+  -output "$XCFRAMEWORK_PATH"
 
 echo "Universal macOS library: $OUTPUT_DIR/libgo_packet_engine.dylib"
 echo "C header: $HEADER_PATH"
+echo "XCFramework: $XCFRAMEWORK_PATH"
