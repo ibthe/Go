@@ -44,7 +44,7 @@ lipo -create \
   "$TEMP_DIR/amd64/libgo_packet_engine.dylib" \
   -output "$OUTPUT_DIR/libgo_packet_engine.dylib"
 
-lipo -verify_arch arm64 x86_64 "$OUTPUT_DIR/libgo_packet_engine.dylib"
+lipo "$OUTPUT_DIR/libgo_packet_engine.dylib" -verify_arch arm64 x86_64
 nm -gU "$OUTPUT_DIR/libgo_packet_engine.dylib" | grep -E ' _GoEngine(Create|Start|ProcessIPVersion|ReadPacket|Stop|Destroy)$'
 
 echo "Universal macOS library: $OUTPUT_DIR/libgo_packet_engine.dylib"
