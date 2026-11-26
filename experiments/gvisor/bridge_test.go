@@ -5,12 +5,15 @@ package main
 
 import (
 	"context"
+	"errors"
+	"io"
 	"fmt"
 	"net"
 	"testing"
 	"time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -125,7 +128,7 @@ func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 		}
 	}()
 
-	listener, err := gonetListenTCP(serverStack, tcpip.FullAddress{
+	listener, err := gonet.ListenTCP(serverStack, tcpip.FullAddress{
 		Addr: tcpip.AddrFrom4([4]byte{10, 77, 0, 2}),
 		Port: 8443,
 	})
@@ -155,7 +158,7 @@ func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 		relayDone <- err
 	}()
 
-	clientConn, err := gonetDialTCP(ctx, clientStack, tcpip.FullAddress{
+	clientConn, err := gonet.DialContextTCP(ctx, clientStack, tcpip.FullAddress{
 		Addr: tcpip.AddrFrom4([4]byte{10, 77, 0, 2}),
 		Port: 8443,
 	})
