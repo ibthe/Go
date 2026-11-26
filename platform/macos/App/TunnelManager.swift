@@ -34,7 +34,7 @@ final class TunnelManager: ObservableObject {
 
     func load() async {
         do {
-            let managers = try await NETunnelProviderManager.loadAllFromPreferences()
+            let managers = try await NETunnelProviderManager.loadAllGoManagers()
             manager = managers.first {
                 ($0.protocolConfiguration as? NETunnelProviderProtocol)?
                     .providerBundleIdentifier == providerBundleIdentifier
@@ -74,8 +74,8 @@ final class TunnelManager: ObservableObject {
         target.localizedDescription = "Go"
         target.isEnabled = true
 
-        try await target.saveToPreferences()
-        try await target.loadFromPreferences()
+        try await target.saveGoPreferences()
+        try await target.reloadGoPreferences()
         manager = target
         status = target.connection.status
         isConfigured = true
@@ -117,7 +117,7 @@ enum TunnelManagerError: LocalizedError {
 }
 
 private extension NETunnelProviderManager {
-    static func loadAllFromPreferences() async throws -> [NETunnelProviderManager] {
+    static func loadAllGoManagers() async throws -> [NETunnelProviderManager] {
         try await withCheckedThrowingContinuation { continuation in
             loadAllFromPreferences { managers, error in
                 if let error {
@@ -129,7 +129,7 @@ private extension NETunnelProviderManager {
         }
     }
 
-    func saveToPreferences() async throws {
+    func saveGoPreferences() async throws {
         try await withCheckedThrowingContinuation { continuation in
             saveToPreferences { error in
                 if let error {
@@ -141,7 +141,7 @@ private extension NETunnelProviderManager {
         }
     }
 
-    func loadFromPreferences() async throws {
+    func reloadGoPreferences() async throws {
         try await withCheckedThrowingContinuation { continuation in
             loadFromPreferences { error in
                 if let error {
