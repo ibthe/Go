@@ -22,8 +22,8 @@ type Config struct {
 	Proxies []Proxy `json:"proxies"`
 }
 
-// Proxy describes one HTTPS CONNECT proxy. Credentials are referenced by
-// environment-variable name and are never written into the configuration.
+// Proxy describes one HTTPS CONNECT proxy. Credential references are lookup
+// keys supplied by the platform adapter and are never secret values.
 type Proxy struct {
 	ID          string `json:"id"`
 	Endpoint    string `json:"endpoint"`
@@ -147,7 +147,7 @@ func (c Config) ResolveWithLookup(lookup func(string) (string, bool)) ([]Resolve
 			username, okUser := lookup(p.UsernameEnv)
 			password, okPass := lookup(p.PasswordEnv)
 			if !okUser || !okPass {
-				return nil, fmt.Errorf("proxy %q: credential environment variables are not set", p.ID)
+				return nil, fmt.Errorf("proxy %q: credential values are unavailable", p.ID)
 			}
 			u.User = url.UserPassword(username, password)
 		}
