@@ -8,7 +8,8 @@ import NetworkExtension
 /// into the current TCP-only prototype.
 final class GoPacketTunnelProvider: NEPacketTunnelProvider {
     private enum ConfigurationKey {
-        static let proxyConfigPath = "proxyConfigPath"
+        static let appGroupIdentifier = "appGroupIdentifier"
+        static let configFileName = "configFileName"
         static let mtu = "mtu"
         static let connectTimeoutMillis = "connectTimeoutMillis"
     }
@@ -23,9 +24,8 @@ final class GoPacketTunnelProvider: NEPacketTunnelProvider {
         guard
             let tunnelProtocol = protocolConfiguration as? NETunnelProviderProtocol,
             let configuration = tunnelProtocol.providerConfiguration,
-            let configPath = configuration[ConfigurationKey.proxyConfigPath] as? String,
-            configPath.hasPrefix("/"),
-            FileManager.default.isReadableFile(atPath: configPath)
+            configuration[ConfigurationKey.appGroupIdentifier] as? String == GoSharedConfiguration.appGroupIdentifier,
+            configuration[ConfigurationKey.configFileName] as? String == GoSharedConfiguration.fileName
         else {
             completionHandler(GoPacketTunnelProviderError.invalidConfiguration)
             return
@@ -40,8 +40,22 @@ final class GoPacketTunnelProvider: NEPacketTunnelProvider {
             return
         }
 
+        let configURL: URL
+        let credentialValues: [String: String]
+        do {
+            configURL = try GoSharedConfiguration.configurationURL()
+            credentialValues = try GoSharedConfiguration.loadCredentialValues(
+                configURL: configURL,
+                store: ProxyCredentialStore()
+            )
+        } catch {
+            completionHandler(error)
+            return
+        }
+
         guard let engine = GoPacketEngineCABI(
-            proxyConfigPath: configPath,
+            proxyConfigPath: configURL.path,
+            credentials: credentialValues,
             timeoutMillis: Int32(timeoutValue)
         ) else {
             completionHandler(GoPacketTunnelProviderError.engineInitializationFailed)
