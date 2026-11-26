@@ -9,11 +9,12 @@ This directory contains the first native boundary for Apple's Network Extension 
 - The adapter passes complete IP packets and their address-family metadata to a `GoPacketEngine` implementation.
 - `GoPacketTunnelProvider.swift` owns the experimental Network Extension start/stop lifecycle and connects the C ABI engine to the packet-flow adapter.
 - The provider deliberately configures IPv4/IPv6 interface addresses with **empty included-route lists**. It is a lifecycle smoke-test scaffold and does not redirect normal device traffic.
-- `ProxyCredentialStore.swift` provides a Keychain-backed helper for proxy usernames/passwords, but no app target or settings UI calls it yet.
+- `ProxyCredentialStore.swift` provides a Keychain-backed helper for proxy usernames/passwords. It is not yet shared between the host app and extension; credentials must not be placed in `providerConfiguration`.
+- `platform/macos/App/TunnelManager.swift` loads/saves the system VPN profile with `NETunnelProviderManager`, observes status changes, and starts/stops the provider. The SwiftUI dashboard exposes these controls and accepts an absolute path to a non-secret proxy configuration file.
 - `scripts/build-macos-go-library.sh` builds the Go C-shared engine for both macOS architectures, combines them into a universal2 dylib, verifies the exported C ABI, and packages the result as `GoPacketEngine.xcframework`.
 - The gVisor-backed processor remains in the isolated `experiments/gvisor` module.
 - `platform/macos/project.yml` defines a generated Xcode project with a host macOS app and a separate packet-tunnel extension target. The extension links and embeds the Go XCFramework.
-- CI successfully generates the Xcode project and builds both targets without code signing. This is a buildable development shell, not yet a distributable or operational VPN: there is no signed entitlement/profile, tunnel-management UI, secure app-to-extension configuration handoff, or device validation. The smoke-test provider intentionally installs no traffic routes.
+- CI successfully generates the Xcode project and builds both targets without code signing. This is a buildable development shell, not yet a distributable or operational VPN: there is no signed entitlement/profile, validated shared-container access for the config file, shared Keychain access, or device validation. The app now has a development tunnel-management UI, but the provider cannot yet be considered deployable. The smoke-test provider intentionally installs no traffic routes.
 
 ## Build the native Go library
 
@@ -45,4 +46,4 @@ The Go implementation must treat packets as IP-layer data (no Ethernet header), 
 
 ## Validation still required
 
-The Swift sources and provider lifecycle scaffold compile as part of the actual Xcode extension target. CI has verified Go library generation, XCFramework packaging, Xcode project generation, linking, and unsigned app/extension build. Remaining work: add a real tunnel-management UI and secure configuration handoff, obtain the required Apple signing capability and provisioning profile, sign the app/extension, then validate lifecycle startup/shutdown on a Mac. No traffic routes should be enabled until the engine supports the required protocols and DNS behavior.
+The Swift sources and provider lifecycle scaffold compile as part of the actual Xcode extension target. CI has verified Go library generation, XCFramework packaging, Xcode project generation, linking, and unsigned app/extension build. Remaining work: establish a sandbox-safe shared config location (for example, a provisioned App Group), connect the Keychain credential store through a shared access group or an explicit credential bridge, obtain the required Apple signing capability and provisioning profile, sign the app/extension, then validate lifecycle startup/shutdown on a Mac. No traffic routes should be enabled until the engine supports the required protocols and DNS behavior.
