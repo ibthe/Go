@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"runtime/cgo"
 	"strings"
 	"time"
@@ -50,8 +51,17 @@ func GoEngineCreateWithCredentials(configPath *C.char, credentialsJSON *C.char, 
 	if err := decoder.Decode(&credentials); err != nil || credentials == nil {
 		return 0
 	}
-	if decoder.Decode(new(any)) == nil {
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
 		return 0
+	}
+	if len(credentials) > 128 {
+		return 0
+	}
+	for key, value := range credentials {
+		if key == "" || len(key) > 256 || len(value) > 16*1024 {
+			return 0
+		}
 	}
 	lookup := func(name string) (string, bool) {
 		value, ok := credentials[name]
