@@ -1,7 +1,7 @@
 // Package main contains an isolated gVisor netstack experiment.
 // It is deliberately a nested module so its Go toolchain and dependencies do
 // not affect the production application.
-package main
+package processor
 
 import (
 	"context"
