@@ -17,6 +17,7 @@ import (
 	"time"
 	"sync/atomic"
 
+	"gvisor.dev/gvisor/pkg/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
@@ -86,7 +87,12 @@ func bridgePackets(ctx context.Context, a, b *channel.Endpoint) func() (uint64, 
 				return
 			}
 			count.Add(1)
-			dst.InjectInbound(pkt.NetworkProtocolNumber, pkt)
+			protocol := pkt.NetworkProtocolNumber
+			raw := pkt.ToBuffer()
+			pkt.DecRef()
+			inbound := stack.NewPacketBuffer(stack.PacketBufferOptions{Payload: raw})
+			inbound.NetworkProtocolNumber = protocol
+			dst.InjectInbound(protocol, inbound)
 		}
 	}
 	go pump(a, b, &aToB)
