@@ -113,7 +113,18 @@ func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 			}
 			go func() {
 				defer conn.Close()
-				_, _ = io.Copy(conn, conn)
+				buf := make([]byte, 4096)
+				for {
+					n, err := conn.Read(buf)
+					if n > 0 {
+						if _, writeErr := conn.Write(buf[:n]); writeErr != nil {
+							return
+						}
+					}
+					if err != nil {
+						return
+					}
+				}
 			}()
 		}
 	}()
