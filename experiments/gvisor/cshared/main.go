@@ -8,8 +8,10 @@ import "C"
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"runtime/cgo"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -27,6 +29,35 @@ func GoEngineCreate(configPath *C.char, timeoutMillis C.int) C.uintptr_t {
 		return 0
 	}
 	engine, err := processor.NewEngineFromEnvironment(C.GoString(configPath), time.Duration(timeoutMillis)*time.Millisecond)
+	if err != nil {
+		return 0
+	}
+	return C.uintptr_t(cgo.NewHandle(&bridge{engine: engine}))
+}
+
+//export GoEngineCreateWithCredentials
+func GoEngineCreateWithCredentials(configPath *C.char, credentialsJSON *C.char, timeoutMillis C.int) C.uintptr_t {
+	if configPath == nil || credentialsJSON == nil || timeoutMillis < 1 {
+		return 0
+	}
+	raw := C.GoString(credentialsJSON)
+	if len(raw) > 64*1024 {
+		return 0
+	}
+	decoder := json.NewDecoder(strings.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	var credentials map[string]string
+	if err := decoder.Decode(&credentials); err != nil || credentials == nil {
+		return 0
+	}
+	if decoder.Decode(new(any)) == nil {
+		return 0
+	}
+	lookup := func(name string) (string, bool) {
+		value, ok := credentials[name]
+		return value, ok
+	}
+	engine, err := processor.NewEngineFromProxyConfig(C.GoString(configPath), lookup, time.Duration(timeoutMillis)*time.Millisecond)
 	if err != nil {
 		return 0
 	}
