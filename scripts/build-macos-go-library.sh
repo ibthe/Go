@@ -11,6 +11,13 @@ trap 'rm -rf "$TEMP_DIR"' EXIT
 mkdir -p "$OUTPUT_DIR"
 HEADER_PATH="$OUTPUT_DIR/libgo_packet_engine.h"
 
+# The gVisor spike is an independent Go module. Populate its module checksums
+# before building so clean CI checkouts do not fail with missing go.sum entries.
+(
+  cd "$MODULE_DIR"
+  go mod download
+)
+
 for ARCH in arm64 amd64; do
   ARCH_DIR="$TEMP_DIR/$ARCH"
   mkdir -p "$ARCH_DIR"
