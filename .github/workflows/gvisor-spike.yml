@@ -9,12 +9,14 @@ on:
       - "internal/proxyconfig/**"
       - "internal/proxypool/**"
       - "internal/proxytransport/**"
+      - "scripts/build-macos-go-library.sh"
       - ".github/workflows/gvisor-spike.yml"
   pull_request:
     paths:
       - "experiments/gvisor/**"
       - "internal/tunnel/**"
       - "internal/proxytransport/**"
+      - "scripts/build-macos-go-library.sh"
       - ".github/workflows/gvisor-spike.yml"
 
 jobs:
@@ -37,3 +39,23 @@ jobs:
         run: go build -buildmode=c-shared -o /tmp/libgo_packet_engine.so ./cshared
       - name: Verify generated C ABI
         run: grep -E "GoEngine(Create|Start|ProcessIPVersion|ReadPacket|Stop|Destroy)" /tmp/libgo_packet_engine.h
+
+  macos-universal-library:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.3"
+          cache-dependency-path: experiments/gvisor/go.mod
+      - name: Build arm64 and x86_64 Go libraries
+        run: bash scripts/build-macos-go-library.sh build/macos
+      - name: Upload universal library and C header
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-packet-engine-macos-universal
+          path: |
+            build/macos/libgo_packet_engine.dylib
+            build/macos/libgo_packet_engine.h
+          if-no-files-found: error
+          retention-days: 14
