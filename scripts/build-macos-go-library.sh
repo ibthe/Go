@@ -11,8 +11,6 @@ trap 'rm -rf "$TEMP_DIR"' EXIT
 mkdir -p "$OUTPUT_DIR"
 HEADER_PATH="$OUTPUT_DIR/libgo_packet_engine.h"
 
-# The gVisor spike is an independent Go module. Populate its module checksums
-# before building so clean CI checkouts do not fail with missing go.sum entries.
 (
   cd "$MODULE_DIR"
   go mod tidy
@@ -45,9 +43,8 @@ lipo -create \
   -output "$OUTPUT_DIR/libgo_packet_engine.dylib"
 
 lipo "$OUTPUT_DIR/libgo_packet_engine.dylib" -verify_arch arm64 x86_64
-nm -gU "$OUTPUT_DIR/libgo_packet_engine.dylib" | grep -E ' _GoEngine(Create|Start|ProcessIPVersion|ReadPacket|Stop|Destroy)
+nm -gU "$OUTPUT_DIR/libgo_packet_engine.dylib" | grep -E ' _GoEngine(Create|Start|ProcessIPVersion|ReadPacket|Stop|Destroy)$'
 
-# Package the universal dylib and generated header in the format Xcode can link.
 XCFRAMEWORK_PATH="$OUTPUT_DIR/GoPacketEngine.xcframework"
 rm -rf "$XCFRAMEWORK_PATH"
 xcodebuild -create-xcframework \
