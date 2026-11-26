@@ -2,7 +2,9 @@
 
 ## Status
 
-Design stage. No working macOS VPN is implemented by this document.
+The transport-side TCP relay is implemented and covered by unit and end-to-end tests. `internal/tunnel.RelayAcceptedTCP` now maps an accepted TCP connection's peer address to the HTTPS CONNECT destination, while `RelayTCP` handles bidirectional stream copying and lifecycle. This is the adapter boundary a userspace IP stack can call.
+
+The packet-to-flow engine and macOS Network Extension are not implemented. This repository does not yet contain a working macOS VPN.
 
 ## Why a packet-to-stream adapter is required
 
@@ -48,7 +50,7 @@ Spike acceptance criteria:
 
 1. Inject synthetic IPv4 TCP packets into the stack and receive a TCP flow.
 2. Verify TCP handshake, payload reassembly, half-close, reset, and idle timeout behavior.
-3. Relay the flow through a local HTTPS CONNECT test proxy using `proxytransport.Dialer`.
+3. Relay the flow through a local HTTPS CONNECT test proxy using `proxytransport.Dialer` and `internal/tunnel.RelayAcceptedTCP`.
 4. Return response bytes as correctly formed IP packets through the packet endpoint.
 5. Add IPv6 tests before enabling IPv6 routes in the system tunnel.
 6. Verify cancellation and resource cleanup when the provider stops or a proxy fails.
@@ -94,4 +96,4 @@ The macOS target requires the Network Extension packet-tunnel entitlement, an Ap
 
 ## Next implementation milestone
 
-Build the gVisor compatibility spike as an isolated Go package, pinned to an exact revision. Keep it out of the production tunnel path until packet injection, TCP forwarding, proxy relay, shutdown, and tests all pass. Then add the Swift Packet Tunnel Provider target and its signing configuration.
+Build the gVisor compatibility spike as an isolated Go module, pinned to an exact upstream revision and kept out of the production dependency graph. Prove packet injection, TCP forwarding through `RelayAcceptedTCP`, response packet emission, and shutdown in CI before adding the Swift Packet Tunnel Provider target and its signing configuration.
