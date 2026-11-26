@@ -45,7 +45,16 @@ jobs:
         working-directory: platform/macos
         run: xcodebuild -project Go.xcodeproj -scheme Go -configuration Debug -destination 'platform=macOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO
 
-      - name: Package unsigned macOS app
+      - name: Ad-hoc sign and verify development app bundle
+        working-directory: platform/macos
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Debug/Go.app"
+          # Ad-hoc signing gives the bundle a structurally valid local code
+          # signature. It is NOT Developer ID signing and does not authorize
+          # Network Extension entitlements or satisfy notarization.
+          codesign --force --deep --sign - --timestamp=none "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+      - name: Package development app
         working-directory: platform/macos
         run: |
           mkdir -p build/package
