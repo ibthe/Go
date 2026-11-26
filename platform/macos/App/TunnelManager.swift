@@ -52,8 +52,8 @@ final class TunnelManager: ObservableObject {
         }
     }
 
-    /// Saves a non-secret config-file path. Credentials must never be placed in
-    /// providerConfiguration; shared Keychain access is a separate signed-build task.
+    /// Copies non-secret configuration into the shared App Group container.
+    /// The system VPN profile stores only the group and fixed filename, never secrets.
     func saveProfile(configPath: String) async throws {
         let path = configPath.trimmingCharacters(in: .whitespacesAndNewlines)
         guard path.hasPrefix("/"),
