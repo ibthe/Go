@@ -1,6 +1,6 @@
 # Download and run the macOS development app
 
-The **macOS App Build** workflow publishes a downloadable artifact named
+The **macOS App Build** workflow publishes an artifact named
 `go-macos-download-package`.
 
 ## Install
@@ -9,16 +9,18 @@ The **macOS App Build** workflow publishes a downloadable artifact named
 2. Open the successful run and download `go-macos-download-package` under **Artifacts**.
 3. Unzip `Go-macOS-unsigned.zip`.
 4. Move `Go.app` into **Applications**.
-5. Control-click the app, choose **Open**, and confirm the macOS prompt.
+5. If macOS blocks the app, open **System Settings → Privacy & Security** and use **Open Anyway** only if that option is offered for this app. You may also Control-click the app and choose **Open**.
 
-This is an unsigned development build. macOS may show an unidentified-developer warning.
+The CI build is ad-hoc signed and its signature is checked before packaging. Ad-hoc signing is not an Apple Developer ID signature, does not establish a trusted developer identity, and does not guarantee Gatekeeper acceptance on every Mac. Do not disable Gatekeeper or run blanket quarantine-removal commands.
 
-## Important limitations
+## VPN status — not ready for real traffic
 
-This package lets you launch and inspect the macOS app shell. It is **not a functioning VPN**:
-- the Packet Tunnel extension is not signed or provisioned with an Apple Developer Team;
-- App Group and shared Keychain entitlements are not runtime-authorized;
+This package is a development app shell, **not a functioning VPN**:
+- the Packet Tunnel extension is not signed with an Apple Developer Team or provisioned;
+- App Group and shared Keychain entitlements are not authorized for distribution;
 - the provider intentionally installs no included traffic routes;
-- the current engine is an experimental TCP-only prototype and is not ready to protect all device traffic.
+- the current engine is an experimental TCP-only prototype and does not protect all device traffic.
 
-Do not use this build as a privacy or security tool, and do not assume that the Connect control establishes a protected tunnel. A properly signed and provisioned build plus further packet, DNS, UDP/QUIC, routing, and fail-closed validation is required before real VPN use.
+Do not rely on this build for privacy or security, and do not assume that Connect establishes a protected tunnel. A production build requires a registered App ID, Network Extension capability, matching App Group and Keychain entitlements, provisioning, Developer ID signing, notarization, and further TCP/UDP/DNS/QUIC/routing/fail-closed validation.
+
+No Apple account password, verification code, certificate private key, or provisioning secret should be sent in chat.
