@@ -10,6 +10,7 @@ import NetworkExtension
 protocol GoPacketEngine: AnyObject {
     func start(mtu: Int) throws
     func setPacketOutputHandler(_ handler: @escaping (PacketTunnelPacket) -> Void)
+    func setFailureHandler(_ handler: @escaping (Error) -> Void)
     func process(packet: Data, protocolFamily: NSNumber) throws
     func stop()
 }
@@ -67,6 +68,9 @@ final class PacketTunnelFlowAdapter {
             do {
                 self.engine.setPacketOutputHandler { [weak self] packet in
                     self?.writeOutbound(packet)
+                }
+                self.engine.setFailureHandler { [weak self] error in
+                    self?.queue.async { self?.fail(error) }
                 }
                 try self.engine.start(mtu: self.mtu)
                 self.running = true
