@@ -118,7 +118,7 @@ enum TunnelManagerError: LocalizedError {
 
 private extension NETunnelProviderManager {
     static func loadAllGoManagers() async throws -> [NETunnelProviderManager] {
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[NETunnelProviderManager], Error>) in
             loadAllFromPreferences { managers, error in
                 if let error {
                     continuation.resume(throwing: error)
@@ -130,7 +130,7 @@ private extension NETunnelProviderManager {
     }
 
     func saveGoPreferences() async throws {
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             saveToPreferences { error in
                 if let error {
                     continuation.resume(throwing: error)
@@ -142,7 +142,7 @@ private extension NETunnelProviderManager {
     }
 
     func reloadGoPreferences() async throws {
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             loadFromPreferences { error in
                 if let error {
                     continuation.resume(throwing: error)
