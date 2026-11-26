@@ -1,0 +1,5 @@
+# Generated macOS Xcode project and local build products
+/platform/macos/Go.xcodeproj/
+/platform/macos/build/
+/build/
+.DS_Store
