@@ -46,6 +46,7 @@ type Processor interface {
 
 type Engine struct {
 	mu sync.Mutex
+	processMu sync.Mutex
 	processor Processor
 	mtu int
 	running bool
@@ -61,6 +62,8 @@ func New(processor Processor) (*Engine, error) {
 }
 
 func (e *Engine) Start(mtu int) error {
+	e.processMu.Lock()
+	defer e.processMu.Unlock()
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.running {
@@ -102,12 +105,16 @@ func (e *Engine) emit(packet Packet) error {
 }
 
 func (e *Engine) Process(packet []byte, family Family) error {
+	e.processMu.Lock()
+	defer e.processMu.Unlock()
 	e.mu.Lock()
-	defer e.mu.Unlock()
 	if !e.running {
+		e.mu.Unlock()
 		return ErrNotRunning
 	}
-	if err := validatePacket(packet, family, e.mtu); err != nil {
+	mtu := e.mtu
+	e.mu.Unlock()
+	if err := validatePacket(packet, family, mtu); err != nil {
 		return err
 	}
 	if err := e.processor.ProcessPacket(append([]byte(nil), packet...), family); err != nil {
@@ -135,6 +142,8 @@ func (e *Engine) ReadOutput(ctx context.Context) (Packet, error) {
 }
 
 func (e *Engine) Stop() error {
+	e.processMu.Lock()
+	defer e.processMu.Unlock()
 	e.mu.Lock()
 	if !e.running {
 		e.mu.Unlock()
