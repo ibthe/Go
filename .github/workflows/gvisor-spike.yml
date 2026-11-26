@@ -57,5 +57,6 @@ jobs:
           path: |
             build/macos/libgo_packet_engine.dylib
             build/macos/libgo_packet_engine.h
+            build/macos/GoPacketEngine.xcframework/**
           if-no-files-found: error
           retention-days: 14
