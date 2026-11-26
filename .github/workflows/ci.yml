@@ -24,3 +24,6 @@ jobs:
         run: go test ./...
       - name: Vet
         run: go vet ./...
+      - name: Type-check macOS packet flow adapter
+        if: runner.os == 'macOS'
+        run: swiftc -typecheck platform/macos/PacketTunnel/PacketTunnelFlowAdapter.swift
