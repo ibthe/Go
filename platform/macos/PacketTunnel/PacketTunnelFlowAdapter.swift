@@ -9,7 +9,8 @@ import NetworkExtension
 /// must not log packet contents or destination addresses.
 protocol GoPacketEngine: AnyObject {
     func start(mtu: Int) throws
-    func process(packet: Data, protocolFamily: NSNumber) throws -> [PacketTunnelPacket]
+    func setPacketOutputHandler(_ handler: @escaping (PacketTunnelPacket) -> Void)
+    func process(packet: Data, protocolFamily: NSNumber) throws
     func stop()
 }
 
@@ -64,6 +65,9 @@ final class PacketTunnelFlowAdapter {
             }
 
             do {
+                self.engine.setPacketOutputHandler { [weak self] packet in
+                    self?.writeOutbound(packet)
+                }
                 try self.engine.start(mtu: self.mtu)
                 self.running = true
                 completion(nil)
@@ -95,6 +99,23 @@ final class PacketTunnelFlowAdapter {
         return value == AF_INET || value == AF_INET6
     }
 
+    private func writeOutbound(_ packet: PacketTunnelPacket) {
+        queue.async {
+            guard self.running else { return }
+            guard self.isSupportedFamily(packet.protocolFamily) else {
+                self.fail(PacketTunnelFlowAdapterError.unsupportedAddressFamily)
+                return
+            }
+            guard !packet.data.isEmpty, packet.data.count <= self.mtu else {
+                self.fail(PacketTunnelFlowAdapterError.packetExceedsMTU)
+                return
+            }
+            if !self.packetFlow.writePackets([packet.data], withProtocols: [packet.protocolFamily]) {
+                self.fail(PacketTunnelFlowAdapterError.packetWriteFailed)
+            }
+        }
+    }
+
     private func readNextBatch() {
         guard running else { return }
 
@@ -109,9 +130,6 @@ final class PacketTunnelFlowAdapter {
                     return
                 }
 
-                var outboundPackets: [Data] = []
-                var outboundFamilies: [NSNumber] = []
-
                 for (packet, family) in zip(packets, protocolFamilies) {
                     guard self.isSupportedFamily(family) else {
                         self.fail(PacketTunnelFlowAdapterError.unsupportedAddressFamily)
@@ -123,32 +141,11 @@ final class PacketTunnelFlowAdapter {
                     }
 
                     do {
-                        let responses = try self.engine.process(
-                            packet: packet,
-                            protocolFamily: family
-                        )
-                        for response in responses {
-                            guard self.isSupportedFamily(response.protocolFamily) else {
-                                self.fail(PacketTunnelFlowAdapterError.unsupportedAddressFamily)
-                                return
-                            }
-                            guard !response.data.isEmpty, response.data.count <= self.mtu else {
-                                self.fail(PacketTunnelFlowAdapterError.packetExceedsMTU)
-                                return
-                            }
-                            outboundPackets.append(response.data)
-                            outboundFamilies.append(response.protocolFamily)
-                        }
+                        try self.engine.process(packet: packet, protocolFamily: family)
                     } catch {
                         // Fail closed for this packet: do not bypass the tunnel.
                         // Intentionally avoid logging packet or destination data.
                     }
-                }
-
-                if !outboundPackets.isEmpty,
-                   !self.packetFlow.writePackets(outboundPackets, withProtocols: outboundFamilies) {
-                    self.fail(PacketTunnelFlowAdapterError.packetWriteFailed)
-                    return
                 }
 
                 self.readNextBatch()
