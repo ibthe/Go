@@ -7,11 +7,27 @@ This directory contains the first native boundary for Apple's Network Extension 
 - `PacketTunnelFlowAdapter.swift` owns the asynchronous `NEPacketTunnelFlow` read/write loop.
 - `GoPacketEngineCABI.swift` implements the Go packet-engine C ABI with Swift-owned buffers, a bounded output reader, and joined shutdown.
 - The adapter passes complete IP packets and their address-family metadata to a `GoPacketEngine` implementation.
-- The gVisor-backed processor exists only in the isolated `experiments/gvisor` module and is exported through a C ABI. The native shared library is not yet linked into an app target.
-- `ProxyCredentialStore.swift` provides a Keychain-backed helper for proxy usernames/passwords, but no app target or settings UI calls it yet.
-- `GoPacketTunnelProvider.swift` now owns the experimental Network Extension start/stop lifecycle and connects the C ABI engine to the packet-flow adapter.
+- `GoPacketTunnelProvider.swift` owns the experimental Network Extension start/stop lifecycle and connects the C ABI engine to the packet-flow adapter.
 - The provider deliberately configures IPv4/IPv6 interface addresses with **empty included-route lists**. It is a lifecycle smoke-test scaffold and does not redirect normal device traffic.
+- `ProxyCredentialStore.swift` provides a Keychain-backed helper for proxy usernames/passwords, but no app target or settings UI calls it yet.
+- `scripts/build-macos-go-library.sh` builds the Go C-shared engine for both macOS architectures and combines them into a universal2 dylib. The matching generated C header is emitted alongside it.
+- The gVisor-backed processor remains in the isolated `experiments/gvisor` module.
 - This source is still not a runnable VPN: there is no Xcode app/extension target, signed entitlement/profile, linked Go dylib, or device validation. The smoke-test provider intentionally installs no traffic routes.
+
+## Build the native Go library
+
+On a macOS host with Xcode Command Line Tools and Go 1.27.3 installed:
+
+```sh
+bash scripts/build-macos-go-library.sh
+```
+
+The output is written to `build/macos/`:
+
+- `libgo_packet_engine.dylib` — universal2 arm64 + x86_64 dynamic library
+- `libgo_packet_engine.h` — generated C ABI header
+
+The `gVisor netstack spike` GitHub Actions workflow runs this build on macOS and uploads the two files as the `go-packet-engine-macos-universal` artifact (14-day retention). This validates compilation and architecture slices, not signing, embedding, or runtime linkage in an app.
 
 ## Integration contract
 
@@ -27,4 +43,4 @@ The Go implementation must treat packets as IP-layer data (no Ethernet header), 
 
 ## Validation still required
 
-The Swift sources, including the provider lifecycle scaffold, are type-checked in macOS CI against the runner's Apple SDK. The C ABI wrapper has not yet been linked against the generated c-shared library, exercised inside a signed Network Extension target, or installed on a device. The next integration step is an Xcode Packet Tunnel target with the Network Extension entitlement, generated C header/module map, and packaged Go dylib.
+The Swift sources, including the provider lifecycle scaffold, are type-checked in macOS CI against the runner's Apple SDK. The native Go dylib is now built for both macOS architectures in CI, but the Swift wrapper has not yet been linked against it inside an Xcode target. There is no signed Network Extension app target or device validation yet. The next step is to add the Xcode project/extension target, embed and sign the universal dylib, and test lifecycle startup/shutdown on a Mac before considering any traffic routes.
