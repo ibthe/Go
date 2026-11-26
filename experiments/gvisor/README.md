@@ -53,3 +53,37 @@ defer engine.Stop()
 
 The endpoint list remains external to the repository. This module still needs
 the Go 1.27.3 toolchain and is not yet exposed to Swift through a C ABI.
+
+## C ABI for native platform adapters
+
+The `cshared` package exposes a deliberately small C ABI for Swift and other
+native hosts. Build it from this directory with:
+
+```sh
+go build -buildmode=c-shared -o libgo_packet_engine.dylib ./cshared # macOS
+# Linux CI uses .so; Windows packaging will need a separate DLL build.
+```
+
+The build emits the matching `libgo_packet_engine.h` header. The exported API:
+
+- `GoEngineCreate(configPath, timeoutMillis)` loads the external proxy config and returns an opaque `uintptr_t` handle, or zero on failure.
+- `GoEngineStart(handle, mtu)` starts the userspace stack.
+- `GoEngineProcessIPVersion(handle, bytes, length, 4|6)` copies one complete IP packet into Go.
+- `GoEngineReadPacket(handle, buffer, capacity, &family, timeoutMillis)` polls for one outbound packet; positive means bytes copied, zero means timeout, negative means error.
+- `GoEngineStop(handle)` stops the engine; `GoEngineDestroy(handle)` releases the opaque handle.
+
+The native caller owns all buffers and must keep them valid only for the duration
+of each call. The opaque handle is backed by `runtime/cgo.Handle`; no Go pointer
+is retained by native code. Calls on one handle must be serialized by the host,
+and the host must stop polling before destroying it. For now, allocate a
+65,535-byte output buffer: a too-small buffer returns the required size after
+consuming that packet. The API returns coarse status codes and intentionally
+does not expose packet contents, destinations, or credentials in diagnostics.
+
+This is an ABI/build milestone, not yet a linked macOS implementation. Swift
+still needs a concrete `GoPacketEngine` wrapper, a generated-header/module-map
+integration, lifecycle ownership in an `NEPacketTunnelProvider`, and signed
+device testing. Proxy configuration and credential environment lookup are
+currently performed in the Go process; the Keychain helper is not wired into
+this ABI yet. UDP, DNS interception, QUIC behavior, and full-device routing
+remain unsupported/unverified.
