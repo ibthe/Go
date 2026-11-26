@@ -1,0 +1,14 @@
+{
+  "proxies": [
+    {
+      "id": "fastproxy-compatible-1",
+      "endpoint": "https://proxy.example.invalid:443",
+      "username_env": "GO_PROXY_1_USERNAME",
+      "password_env": "GO_PROXY_1_PASSWORD"
+    },
+    {
+      "id": "fastproxy-compatible-2",
+      "endpoint": "https://backup.example.invalid:443"
+    }
+  ]
+}
