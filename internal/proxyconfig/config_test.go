@@ -101,3 +101,30 @@ func TestLoadRejectsBroadPermissions(t *testing.T) {
 		t.Fatal("expected broad permissions to be rejected")
 	}
 }
+
+func TestResolveSkipsDisabledCandidates(t *testing.T) {
+	cfg := Config{Proxies: []Proxy{
+		{ID: "active", Endpoint: "https://active.example:443"},
+		{ID: "candidate", Endpoint: "https://candidate.example:443", Disabled: true},
+	}}
+	resolved, err := cfg.Resolve(func(string) (string, bool) { return "", false })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resolved) != 1 || resolved[0].ID != "active" {
+		t.Fatalf("resolved proxies = %#v; want only active proxy", resolved)
+	}
+}
+
+func TestResolveRejectsOnlyDisabledCandidatesAtPoolBoundary(t *testing.T) {
+	cfg := Config{Proxies: []Proxy{
+		{ID: "candidate", Endpoint: "https://candidate.example:443", Disabled: true},
+	}}
+	resolved, err := cfg.Resolve(func(string) (string, bool) { return "", false })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resolved) != 0 {
+		t.Fatalf("resolved %d proxies; want none", len(resolved))
+	}
+}
