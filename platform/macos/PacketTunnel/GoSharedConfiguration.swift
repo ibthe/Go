@@ -60,10 +60,16 @@ enum GoSharedConfiguration {
     static func configurationURL() throws -> URL {
         let directory = try containerURL().appendingPathComponent(directoryName, isDirectory: true)
         let file = directory.appendingPathComponent(fileName, isDirectory: false)
+        let directoryAttributes = try FileManager.default.attributesOfItem(atPath: directory.path)
         let attributes = try FileManager.default.attributesOfItem(atPath: file.path)
-        guard attributes[.type] as? FileAttributeType == .typeRegular,
+        guard directoryAttributes[.type] as? FileAttributeType == .typeDirectory,
+              let directoryPermissions = directoryAttributes[.posixPermissions] as? NSNumber,
+              directoryPermissions.intValue & 0o077 == 0,
+              attributes[.type] as? FileAttributeType == .typeRegular,
               let permissions = attributes[.posixPermissions] as? NSNumber,
-              permissions.intValue & 0o077 == 0 else {
+              permissions.intValue & 0o077 == 0,
+              let fileSize = attributes[.size] as? NSNumber,
+              fileSize.intValue > 0, fileSize.intValue <= maximumSize else {
             throw SharedConfigurationError.fileProtectionFailed
         }
         return file
@@ -82,7 +88,9 @@ enum GoSharedConfiguration {
         for proxy in envelope.proxies {
             guard let usernameKey = proxy.usernameEnv,
                   let passwordKey = proxy.passwordEnv else { continue }
-            guard let credentials = try store.load(for: proxy.id) else { continue }
+            guard let credentials = try store.load(for: proxy.id) else {
+                throw SharedConfigurationError.missingCredentials(proxyID: proxy.id)
+            }
             values[usernameKey] = credentials.username
             values[passwordKey] = credentials.password
         }
@@ -104,6 +112,7 @@ enum SharedConfigurationError: LocalizedError {
     case invalidConfiguration
     case invalidConfigurationSize
     case fileProtectionFailed
+    case missingCredentials(proxyID: String)
 
     var errorDescription: String? {
         switch self {
@@ -115,6 +124,8 @@ enum SharedConfigurationError: LocalizedError {
             return "The proxy configuration file is empty or exceeds 1 MiB."
         case .fileProtectionFailed:
             return "The shared configuration file permissions are not sufficiently restrictive."
+        case .missingCredentials(let proxyID):
+            return "Credentials are missing from Keychain for proxy ID: \\(proxyID)."
         }
     }
 }
