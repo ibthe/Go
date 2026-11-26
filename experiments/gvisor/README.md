@@ -32,3 +32,24 @@ go test -race -count=1 ./...
 `GVisorProcessor` now implements the root `packetengine.Processor` contract. It creates a gVisor stack with IPv4/IPv6 routes, spoofing/promiscuous ingress, a TCP SYN forwarder, and an asynchronous packet-output loop. Accepted TCP streams are passed to the supplied `tunnel.ContextDialer`; the intended production dialer is `proxypool.Pool`, so proxy failure never falls back to a direct socket. `TestGVisorProcessorConnectsPacketEngineToTCPDialer` drives a synthetic client stack through the root packet engine and verifies a TCP echo round trip and the original destination address.
 
 Together, the tests validate IPv4/IPv6 packet-to-stream handling, IPv4 CONNECT transport, and the packet-engine-to-dialer integration in a controlled environment. They do **not** yet validate Apple's `NEPacketTunnelFlow`, a real TUN descriptor, UDP, DNS policy, system routing, or production performance. The processor is still an isolated prototype and must not be treated as a production VPN.
+
+
+## Wiring the proxy pool into the packet engine
+
+The exported `processor.NewEngineFromEnvironment` factory composes the external
+JSON configuration, environment-based credential lookup, rotating
+`proxypool.Pool`, gVisor TCP processor, and root `packetengine.Engine`:
+
+```go
+engine, err := processor.NewEngineFromEnvironment("proxies.json", 10*time.Second)
+if err != nil {
+    return err
+}
+if err := engine.Start(1500); err != nil {
+    return err
+}
+defer engine.Stop()
+```
+
+The endpoint list remains external to the repository. This module still needs
+the Go 1.27.3 toolchain and is not yet exposed to Swift through a C ABI.
