@@ -26,4 +26,4 @@ jobs:
         run: go vet ./...
       - name: Type-check macOS packet flow adapter
         if: runner.os == 'macOS'
-        run: swiftc -typecheck platform/macos/PacketTunnel/PacketTunnelFlowAdapter.swift platform/macos/PacketTunnel/ProxyCredentialStore.swift
+        run: swiftc -typecheck platform/macos/PacketTunnel/PacketTunnelFlowAdapter.swift platform/macos/PacketTunnel/GoPacketEngineCABI.swift platform/macos/PacketTunnel/ProxyCredentialStore.swift
