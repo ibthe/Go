@@ -197,7 +197,9 @@ func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 		relayDone <- err
 	}()
 
-	clientConn, err := gonet.DialContextTCP(ctx, clientStack, tcpip.FullAddress{
+	dialCtx, cancelDial := context.WithTimeout(ctx, 5*time.Second)
+	defer cancelDial()
+	clientConn, err := gonet.DialContextTCP(dialCtx, clientStack, tcpip.FullAddress{
 		Addr: tcpip.AddrFrom4([4]byte{10, 77, 0, 2}),
 		Port: 8443,
 	}, ipv4.ProtocolNumber)
