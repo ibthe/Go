@@ -3,6 +3,7 @@ package proxyconfig
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -58,7 +59,7 @@ func TestResolveRequiresCredentials(t *testing.T) {
 }
 
 func TestLoadRejectsBroadPermissions(t *testing.T) {
-	if os.Getenv("GOOS") == "windows" {
+	if runtime.GOOS == "windows" {
 		t.Skip("Unix file permission semantics")
 	}
 	path := filepath.Join(t.TempDir(), "proxies.json")
