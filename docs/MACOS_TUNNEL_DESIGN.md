@@ -6,7 +6,7 @@ The transport-side TCP relay is implemented and covered by unit and HTTPS CONNEC
 
 An isolated gVisor experiment now lives in `experiments/gvisor`, with its own Go module and a pinned upstream revision. Tests now connect two in-memory gVisor IPv4/TCP and IPv6/TCP stacks, transfer packets between their channel endpoints, accept resulting flows as `net.Conn`, and pass them through the Go relay. The IPv4 test exercises a local TLS HTTPS CONNECT proxy; the IPv6 test verifies preservation of the original bracketed IPv6 destination. A dedicated workflow uses the newer Go toolchain required by gVisor. This remains a prototype, not the production packet engine.
 
-A first native boundary has also been added at `platform/macos/PacketTunnel/PacketTunnelFlowAdapter.swift`. It pumps complete IP packets between `NEPacketTunnelFlow` and a `GoPacketEngine` protocol, serializes packet processing, and drops packets on engine errors rather than bypassing the tunnel. It is deliberately not yet wired to a Go implementation or a signed `NEPacketTunnelProvider` target.
+A first native boundary has also been added at `platform/macos/PacketTunnel/PacketTunnelFlowAdapter.swift`. A Keychain credential helper is available at `platform/macos/PacketTunnel/ProxyCredentialStore.swift`; it stores proxy credentials as device-only generic-password items but is not yet called by an app target. It pumps complete IP packets between `NEPacketTunnelFlow` and a `GoPacketEngine` protocol, serializes packet processing, and drops packets on engine errors rather than bypassing the tunnel. It is deliberately not yet wired to a Go implementation or a signed `NEPacketTunnelProvider` target.
 
 ## Platform-neutral Go packet engine boundary
 
@@ -122,4 +122,4 @@ The macOS target requires the Network Extension packet-tunnel entitlement, an Ap
 
 ## Next implementation milestone
 
-Implement the concrete `GoPacketEngine` behind the Swift adapter and connect it to the gVisor packet endpoint through a narrow, testable Go/C boundary. Before installing system routes, validate packet ownership, checksum handling, resets, half-close, cancellation, MTU behavior, and IPv4/IPv6 round trips. Keep gVisor isolated until its API and performance are validated. Then add the signed Swift Packet Tunnel Provider target and configure only the routes the engine can safely carry.
+Expose the isolated `GVisorProcessor` behind the Swift adapter through a narrow, testable Go/C boundary. Before installing system routes, validate packet ownership, checksum handling, resets, half-close, cancellation, MTU behavior, and IPv4/IPv6 round trips. Keep gVisor isolated until its API and performance are validated. Then add the signed Swift Packet Tunnel Provider target and configure only the routes the engine can safely carry.
