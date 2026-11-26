@@ -42,7 +42,7 @@ func newStack(t *testing.T, address [4]byte) (*stack.Stack, *channel.Endpoint) {
 		Protocol: ipv4.ProtocolNumber,
 		AddressWithPrefix: tcpip.AddressWithPrefix{
 			Address:   tcpip.AddrFrom4(address),
-			Prefix:    24,
+			PrefixLen: 24,
 		},
 	}
 	if err := s.AddProtocolAddress(nicID, protocolAddress, stack.AddressProperties{}); err != nil {
