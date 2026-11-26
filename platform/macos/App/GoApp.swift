@@ -13,6 +13,9 @@ struct GoApp: App {
 private struct TunnelDashboard: View {
     @StateObject private var tunnel = TunnelManager()
     @State private var configPath = ""
+    @State private var proxyID = ""
+    @State private var proxyUsername = ""
+    @State private var proxyPassword = ""
     @State private var isSaving = false
 
     var body: some View {
@@ -50,6 +53,35 @@ private struct TunnelDashboard: View {
             }
             .frame(maxWidth: 380)
 
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Proxy credentials — stored in Keychain")
+                    .font(.callout.weight(.medium))
+                TextField("Proxy ID from proxies.json", text: $proxyID)
+                    .textFieldStyle(.roundedBorder)
+                TextField("Username", text: $proxyUsername)
+                    .textFieldStyle(.roundedBorder)
+                SecureField("Password", text: $proxyPassword)
+                    .textFieldStyle(.roundedBorder)
+                Button("Save credentials to Keychain") {
+                    do {
+                        try tunnel.saveCredential(
+                            proxyID: proxyID,
+                            username: proxyUsername,
+                            password: proxyPassword
+                        )
+                        proxyPassword = ""
+                        errorMessage = nil
+                    } catch {
+                        errorMessage = error.localizedDescription
+                    }
+                }
+                .disabled(proxyID.isEmpty || proxyUsername.isEmpty || proxyPassword.isEmpty)
+                Text("The Proxy ID must match an entry in the configuration. Credentials are not written to the JSON file or VPN profile.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: 380)
+
             HStack {
                 Button("Connect") {
                     Task {
@@ -76,7 +108,7 @@ private struct TunnelDashboard: View {
                     .frame(maxWidth: 380)
             }
 
-            Text("Experimental TCP-only engine. The provider currently installs no traffic routes; connecting only exercises the Network Extension lifecycle.")
+            Text("Experimental TCP-only engine. The provider currently installs no traffic routes. App Group and shared Keychain access require a correctly signed app and extension.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
