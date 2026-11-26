@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"testing"
 	"time"
+	"sync/atomic"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -68,23 +69,26 @@ func newStack(t *testing.T, address [4]byte) (*stack.Stack, *channel.Endpoint) {
 
 // bridgePackets connects two in-memory IP interfaces. Packets produced by one
 // stack are injected into the other stack without parsing or rewriting them.
-func bridgePackets(ctx context.Context, a, b *channel.Endpoint) func() {
-	var done = make(chan struct{}, 2)
-	pump := func(src, dst *channel.Endpoint) {
+func bridgePackets(ctx context.Context, a, b *channel.Endpoint) func() (uint64, uint64) {
+	done := make(chan struct{}, 2)
+	var aToB, bToA atomic.Uint64
+	pump := func(src, dst *channel.Endpoint, count *atomic.Uint64) {
 		defer func() { done <- struct{}{} }()
 		for {
 			pkt := src.ReadContext(ctx)
 			if pkt == nil {
 				return
 			}
+			count.Add(1)
 			dst.InjectInbound(ipv4.ProtocolNumber, pkt)
 		}
 	}
-	go pump(a, b)
-	go pump(b, a)
-	return func() {
+	go pump(a, b, &aToB)
+	go pump(b, a, &bToA)
+	return func() (uint64, uint64) {
 		<-done
 		<-done
+		return aToB.Load(), bToA.Load()
 	}
 }
 
@@ -95,7 +99,8 @@ func TestIPv4TCPFlowBridgesIntoGoRelay(t *testing.T) {
 	waitBridge := bridgePackets(ctx, clientLink, serverLink)
 	t.Cleanup(func() {
 		cancel()
-		waitBridge()
+		aToB, bToA := waitBridge()
+		t.Logf("gVisor packet exchange: client-to-server=%d server-to-client=%d", aToB, bToA)
 		clientStack.Destroy()
 		serverStack.Destroy()
 	})
