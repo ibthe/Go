@@ -68,7 +68,7 @@ func (p *GVisorProcessor) Start(mtu int, emit func(packetengine.Packet) error) e
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	link := channel.New(1024, mtu, "")
+	link := channel.New(1024, uint32(mtu), "")
 	s := stack.New(stack.Options{
 		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol, ipv6.NewProtocol},
 		TransportProtocols: []stack.TransportProtocolFactory{tcp.NewProtocol},
@@ -152,7 +152,7 @@ func (p *GVisorProcessor) ProcessPacket(packet []byte, family packetengine.Famil
 
 	inbound := stack.NewPacketBuffer(stack.PacketBufferOptions{Payload: buffer.MakeWithData(append([]byte(nil), packet...))})
 	inbound.NetworkProtocolNumber = protocol
-	s.InjectInbound(protocol, inbound)
+	p.link.InjectInbound(protocol, inbound)
 	return nil
 }
 
