@@ -1,14 +1,19 @@
 # Proxy configuration
 
-Go accepts an external JSON list of HTTPS CONNECT proxy endpoints. No FastProxy
-addresses, credentials, PAC data, or third-party server list is bundled.
+Go accepts an external JSON list of HTTPS CONNECT proxy endpoints. The example
+configuration includes user-supplied, unverified candidate endpoints marked
+`disabled: true`; these are retained for later testing but are excluded from
+the active proxy pool.
 
 ## File format
 
 Start from [configs/proxies.example.json](../configs/proxies.example.json).
 Replace the example-only hostnames with endpoints you are authorized to use.
 Each endpoint must be `https://host:port`; URL userinfo, paths, query strings,
-and fragments are rejected.
+and fragments are rejected. Set `disabled: true` to retain a candidate without
+allowing the pool to use it. Omit `disabled` or set it to `false` only after
+reviewing compatibility and authorization. Disabled entries are validated but
+skipped by `Config.Resolve`.
 
 Credentials are optional and are referenced by environment-variable names:
 
@@ -75,3 +80,20 @@ host and port values into this file; keep credentials in the environment for
 development and in the platform's native secure credential store for packaged
 macOS, Windows, and Android applications. Do not import the PAC file as
 executable configuration or publish browsing-derived host lists.
+
+## Unverified candidate endpoints
+
+The following addresses were supplied for evaluation and are included in
+`configs/proxies.example.json` as disabled candidates:
+
+- Primary: `23.237.103.44:8443`, `ff.s1.redirtry.top:8443`
+- Backup: `162.244.81.74:8443`, `162.244.81.207:8443`
+- YouTube: `23.237.103.46:8443`, `ff.y1.redirtry.top:8443`
+- Google Play: `de26.staticvaultcdn.xyz:443`
+
+The 2026-11-26 compatibility probe passed 0 of 7: four endpoints returned
+HTTP 400, two returned HTTP 403, and one timed out. These results do not prove
+the services are permanently unusable, but none is currently compatible with
+our unauthenticated HTTPS CONNECT transport. Keep them disabled until valid
+operator instructions/credentials are available and a new test succeeds.
+See [the full audit](PROXY_ENDPOINT_AUDIT.md).
