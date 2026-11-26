@@ -6,7 +6,7 @@ This directory contains the first native boundary for Apple's Network Extension 
 
 - `PacketTunnelFlowAdapter.swift` owns the asynchronous `NEPacketTunnelFlow` read/write loop.
 - The adapter passes complete IP packets and their address-family metadata to a `GoPacketEngine` implementation.
-- A Go engine implementation and the `NEPacketTunnelProvider` lifecycle owner are **not wired yet**.
+- The gVisor-backed processor exists only in the isolated `experiments/gvisor` module; it is not exported through a C ABI or bundled into the app.\n- `ProxyCredentialStore.swift` provides a Keychain-backed helper for proxy usernames/passwords, but no app target or settings UI calls it yet.\n- The `NEPacketTunnelProvider` lifecycle owner is **not wired yet**.
 - This source is not a runnable VPN and does not install routes or claim to capture device traffic.
 
 ## Integration contract
@@ -23,4 +23,4 @@ The Go implementation must treat packets as IP-layer data (no Ethernet header), 
 
 ## Validation still required
 
-This Swift source has not yet been compiled against an Apple SDK or exercised inside a signed Network Extension target. The next integration step is a concrete Go engine bridge (likely a narrow C ABI or cgo wrapper) plus an Xcode Packet Tunnel target with the Network Extension entitlement.
+The Swift sources are type-checked in macOS CI against the runner's Apple SDK. They have not been exercised inside a signed Network Extension target or installed on a device. The next integration step is a concrete Go engine bridge (likely a narrow C ABI or cgo wrapper) plus an Xcode Packet Tunnel target with the Network Extension entitlement.
