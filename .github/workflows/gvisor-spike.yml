@@ -32,3 +32,8 @@ jobs:
       - name: Test packet-to-stream bridge
         working-directory: experiments/gvisor
         run: go test -count=1 -timeout=45s ./...
+      - name: Build C shared library and generated header
+        working-directory: experiments/gvisor
+        run: go build -buildmode=c-shared -o /tmp/libgo_packet_engine.so ./cshared
+      - name: Verify generated C ABI
+        run: grep -E "GoEngine(Create|Start|ProcessIPVersion|ReadPacket|Stop|Destroy)" /tmp/libgo_packet_engine.h
