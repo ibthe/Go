@@ -15,7 +15,7 @@ HEADER_PATH="$OUTPUT_DIR/libgo_packet_engine.h"
 # before building so clean CI checkouts do not fail with missing go.sum entries.
 (
   cd "$MODULE_DIR"
-  go mod download
+  go mod download all
 )
 
 for ARCH in arm64 amd64; do
