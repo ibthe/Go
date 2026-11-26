@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"sync"
 	"sync/atomic"
 
@@ -245,7 +244,3 @@ func (p *GVisorProcessor) Stop() error {
 	return nil
 }
 
-// Ensure the concrete processor's outbound relay target is compatible with net.Dialer.
-var _ tunnel.ContextDialer = (interface {
-	DialContext(context.Context, string, string) (net.Conn, error)
-})(nil)
