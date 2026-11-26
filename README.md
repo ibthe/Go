@@ -20,7 +20,10 @@ The intended user experience is simple: the user turns the connection on; Go eva
 
 - `cmd/go`: development CLI.
 - `internal/routing`: platform-independent domain routing decisions.
-- `internal/proxyconfig`: external proxy configuration and credential references.\n- `internal/proxypool`: rotating HTTPS CONNECT proxy pool with failover.\n- `internal/packetengine`: stack-independent packet-engine contract.\n- `internal/proxytransport`: HTTPS CONNECT TCP transport.
+- `internal/proxyconfig`: external proxy configuration and credential references.
+- `internal/proxypool`: rotating HTTPS CONNECT proxy pool with failover.
+- `internal/packetengine`: stack-independent packet-engine contract.
+- `internal/proxytransport`: HTTPS CONNECT TCP transport.
 - `platforms/`: native integration plans and future platform adapters.
 - `rules/`: schemas and local rule format; no third-party server list is bundled.
 - `.github/workflows/`: continuous integration.
@@ -41,7 +44,7 @@ The current CLI is only a development placeholder. It does not alter system netw
 
 The repository intentionally contains **no FastProxy server addresses, PAC dump, downloaded domain database, credentials, or FastProxy control-plane URLs**.
 
-The PAC file inspected during research is a third-party configuration. Its presence on a user's device does not establish permission to reuse the associated proxy infrastructure. Before any such endpoint is added, we must establish that independent use is permitted and technically supported. Until then, development and tests use local fixtures only.
+The PAC file inspected during research is a third-party configuration. Its presence on a user's device does not establish permission to reuse the associated proxy infrastructure. Before any such endpoint is added, we must establish that independent use is permitted and technically supported. The configurable proxy pool and an isolated gVisor TCP packet processor are implemented as prototypes; the macOS Keychain helper is present but not yet wired into an app target. See [proxy configuration](docs/PROXY_CONFIGURATION.md) and [macOS tunnel design](docs/MACOS_TUNNEL_DESIGN.md).
 
 ## Platform plan
 
