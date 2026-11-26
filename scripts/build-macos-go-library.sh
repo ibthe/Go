@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 MODULE_DIR="$REPO_ROOT/experiments/gvisor"
 OUTPUT_DIR="${1:-$REPO_ROOT/build/macos}"
 TEMP_DIR="$(mktemp -d)"
