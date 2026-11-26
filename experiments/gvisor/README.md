@@ -66,7 +66,8 @@ go build -buildmode=c-shared -o libgo_packet_engine.dylib ./cshared # macOS
 
 The build emits the matching `libgo_packet_engine.h` header. The exported API:
 
-- `GoEngineCreate(configPath, timeoutMillis)` loads the external proxy config and returns an opaque `uintptr_t` handle, or zero on failure.
+- `GoEngineCreate(configPath, timeoutMillis)` is the development/environment-lookup constructor.
+- `GoEngineCreateWithCredentials(configPath, credentialsJSON, timeoutMillis)` accepts a bounded JSON map of credential-reference names to secret values, resolves them in memory, and returns an opaque `uintptr_t` handle. The native caller's string buffer is copied synchronously and is not retained.
 - `GoEngineStart(handle, mtu)` starts the userspace stack.
 - `GoEngineProcessIPVersion(handle, bytes, length, 4|6)` copies one complete IP packet into Go.
 - `GoEngineReadPacket(handle, buffer, capacity, &family, timeoutMillis)` polls for one outbound packet; positive means bytes copied, zero means timeout, negative means error.
@@ -80,10 +81,12 @@ and the host must stop polling before destroying it. For now, allocate a
 consuming that packet. The API returns coarse status codes and intentionally
 does not expose packet contents, destinations, or credentials in diagnostics.
 
-This is an ABI/build milestone, not yet a linked macOS implementation. Swift
-still needs a concrete `GoPacketEngine` wrapper, a generated-header/module-map
-integration, lifecycle ownership in an `NEPacketTunnelProvider`, and signed
-device testing. Proxy configuration and credential environment lookup are
-currently performed in the Go process; the Keychain helper is not wired into
-this ABI yet. UDP, DNS interception, QUIC behavior, and full-device routing
-remain unsupported/unverified.
+The macOS Swift wrapper now calls
+`GoEngineCreateWithCredentials`: the host app copies non-secret configuration
+into a shared App Group container, the extension reads proxy secrets from a
+shared Keychain access group, and the credential map is passed synchronously
+into Go. App Group and Keychain entitlement sharing still require Apple
+registration, signed provisioning profiles, and real-Mac runtime validation.
+The environment-based constructor remains for development tooling only.
+UDP, DNS interception, QUIC behavior, and full-device routing remain
+unsupported/unverified.
