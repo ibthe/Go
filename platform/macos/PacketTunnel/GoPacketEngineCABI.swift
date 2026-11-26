@@ -4,6 +4,13 @@ import Foundation
 @_silgen_name("GoEngineCreate")
 private func goEngineCreate(_ configPath: UnsafePointer<CChar>, _ timeoutMillis: Int32) -> UInt
 
+@_silgen_name("GoEngineCreateWithCredentials")
+private func goEngineCreateWithCredentials(
+    _ configPath: UnsafePointer<CChar>,
+    _ credentialsJSON: UnsafePointer<CChar>,
+    _ timeoutMillis: Int32
+) -> UInt
+
 @_silgen_name("GoEngineStart")
 private func goEngineStart(_ handle: UInt, _ mtu: Int32) -> Int32
 
@@ -69,10 +76,22 @@ final class GoPacketEngineCABI: GoPacketEngine {
     private let readerGroup = DispatchGroup()
     private var failureHandler: ((Error) -> Void)?
 
-    init?(proxyConfigPath: String, timeoutMillis: Int32 = 10_000) {
-        guard timeoutMillis > 0 else { return nil }
-        let created = proxyConfigPath.withCString {
-            goEngineCreate($0, timeoutMillis)
+    init?(
+        proxyConfigPath: String,
+        credentials: [String: String],
+        timeoutMillis: Int32 = 10_000
+    ) {
+        guard timeoutMillis > 0,
+              credentials.count <= 128,
+              let data = try? JSONSerialization.data(withJSONObject: credentials, options: [.sortedKeys]),
+              data.count <= 64 * 1024,
+              let encodedCredentials = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        let created = proxyConfigPath.withCString { path in
+            encodedCredentials.withCString { secretJSON in
+                goEngineCreateWithCredentials(path, secretJSON, timeoutMillis)
+            }
         }
         guard created != 0 else { return nil }
         self.handle = created
