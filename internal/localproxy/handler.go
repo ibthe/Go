@@ -2,7 +2,8 @@
 package localproxy
 
 import (
-	"bufio"\n\t"context"
+	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"net"
