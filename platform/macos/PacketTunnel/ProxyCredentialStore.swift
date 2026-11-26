@@ -10,21 +10,32 @@ struct ProxyCredentials: Codable {
 /// The credential identifier is not a proxy URL and must not contain secrets.
 final class ProxyCredentialStore {
     private let service: String
+    private let accessGroup: String?
 
     init(service: String = "app.go.proxy-credentials") {
         self.service = service
+        self.accessGroup = Bundle.main.object(forInfoDictionaryKey: "GoKeychainAccessGroup") as? String
     }
 
-    func save(_ credentials: ProxyCredentials, for identifier: String) throws {
+    private func query(for identifier: String) throws -> [String: Any] {
         guard !identifier.isEmpty else {
             throw ProxyCredentialStoreError.invalidIdentifier
         }
-        let data = try JSONEncoder().encode(credentials)
-        let baseQuery: [String: Any] = [
+        guard let accessGroup, !accessGroup.isEmpty,
+              !accessGroup.contains("$(") else {
+            throw ProxyCredentialStoreError.sharedAccessGroupUnavailable
+        }
+        return [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: identifier
+            kSecAttrAccount as String: identifier,
+            kSecAttrAccessGroup as String: accessGroup
         ]
+    }
+
+    func save(_ credentials: ProxyCredentials, for identifier: String) throws {
+        let baseQuery = try query(for: identifier)
+        let data = try JSONEncoder().encode(credentials)
         let attributes: [String: Any] = [
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
@@ -42,16 +53,9 @@ final class ProxyCredentialStore {
     }
 
     func load(for identifier: String) throws -> ProxyCredentials? {
-        guard !identifier.isEmpty else {
-            throw ProxyCredentialStoreError.invalidIdentifier
-        }
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: identifier,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
+        var query = try query(for: identifier)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound {
@@ -64,14 +68,7 @@ final class ProxyCredentialStore {
     }
 
     func delete(for identifier: String) throws {
-        guard !identifier.isEmpty else {
-            throw ProxyCredentialStoreError.invalidIdentifier
-        }
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: identifier
-        ]
+        let query = try query(for: identifier)
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw ProxyCredentialStoreError.keychainStatus(status)
@@ -79,7 +76,19 @@ final class ProxyCredentialStore {
     }
 }
 
-enum ProxyCredentialStoreError: Error {
+enum ProxyCredentialStoreError: LocalizedError {
     case invalidIdentifier
+    case sharedAccessGroupUnavailable
     case keychainStatus(OSStatus)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidIdentifier:
+            return "A proxy credential identifier is required."
+        case .sharedAccessGroupUnavailable:
+            return "The shared Keychain access group is unavailable. A correctly signed app and extension are required."
+        case .keychainStatus(let status):
+            return "Keychain operation failed (\(status))."
+        }
+    }
 }
