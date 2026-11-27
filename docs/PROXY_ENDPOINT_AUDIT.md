@@ -23,6 +23,51 @@ A 400 response shows that a TLS service answered, but it does not establish that
 
 The probe did not have credentials. If the operators issued credentials or documented a required protocol, retest only with those authorized details. Do not guess credentials, bypass access controls, or try to evade a 403.
 
+
+## Extended protocol audit — 2026-11-27
+
+Runner: GitHub Actions, Ubuntu 26.04.  \
+Target: `https://example.com/`.  \
+Methods: (1) TLS-wrapped HTTPS CONNECT using the Go transport, (2) plaintext
+HTTP proxy using curl, and (3) unauthenticated SOCKS5 using curl with remote
+DNS (`socks5h`). No credentials, protocol guessing beyond these documented
+handshakes, or access-control bypass was attempted.
+
+| Endpoint | HTTPS CONNECT | HTTP proxy | SOCKS5 |
+|---|---|---|---|
+| `23.237.103.44:8443` | 400 Bad Request | 400 Bad Request | Timeout (5 s) |
+| `ff.s1.redirtry.top:8443` | 400 Bad Request | 400 Bad Request | Timeout (5 s) |
+| `162.244.81.74:8443` | 403 Forbidden | 400 Bad Request | Invalid SOCKS5 initial response |
+| `162.244.81.207:8443` | 403 Forbidden | 400 Bad Request | Invalid SOCKS5 initial response |
+| `23.237.103.46:8443` | 400 Bad Request | 400 Bad Request | Timeout (5 s) |
+| `ff.y1.redirtry.top:8443` | 400 Bad Request | 400 Bad Request | Timeout (5 s) |
+| `de26.staticvaultcdn.xyz:443` | TCP timeout | TCP timeout | TCP timeout |
+
+**Outcome: 0/7 endpoints demonstrated a working HTTP proxy or SOCKS5 service
+in this audit.** None is eligible for activation in the Go proxy pool.
+
+Interpretation:
+- HTTP 400 means the service answered but did not establish the requested
+  CONNECT tunnel. It does not identify the service's intended protocol.
+- HTTP 403 means the CONNECT request was denied. It may be policy- or
+  authentication-related; do not attempt to bypass it.
+- SOCKS5 timeout or an invalid initial response is not a successful SOCKS5
+  handshake.
+- These tests did not try credentials, source-IP allowlisting, custom SNI,
+  proprietary framing, TLS-wrapped SOCKS5, or other undocumented protocols.
+  Those require configuration or documentation from the operator; they
+  should not be guessed.
+
+The FastProxy XPI's custom proxy selector contains exactly two PAC values:
+`PROXY` (UI label `HTTP/S`) and `SOCKS5`. The HTTP proxy and SOCKS5 checks
+above correspond to those advertised types. The XPI does not prove that the
+seven supplied endpoints are FastProxy's own proxy servers or specify their
+required authentication/protocol parameters.
+
+The extended audit was run by
+[GitHub Actions run 45951120543](https://github.com/ibthe/Go/actions/runs/45951120543).
+Its report artifact is retained for seven days.
+
 ## Security review notes
 
 Public reputation sources report elevated risk signals for the two backup IPs:
