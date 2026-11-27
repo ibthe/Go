@@ -34,11 +34,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "CONNECT method required", http.StatusMethodNotAllowed)
 		return
 	}
-	if h.Dialer == nil {
-		http.Error(w, "proxy pool unavailable", http.StatusServiceUnavailable)
-		return
-	}
-	if r.URL == nil || r.Host == "" || strings.ContainsAny(r.Host, "\\r\\n /") {
+	if r.URL == nil || r.Host == "" || strings.ContainsAny(r.Host, "\r\n /") {
 		http.Error(w, "invalid CONNECT destination", http.StatusBadRequest)
 		return
 	}
@@ -47,11 +43,15 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "CONNECT destination must include host and port", http.StatusBadRequest)
 		return
 	}
+	if h.Dialer == nil {
+		http.Error(w, "proxy pool unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	hijacker, ok := w.(http.Hijacker)
 	if !ok { http.Error(w, "hijacking unsupported", http.StatusInternalServerError); return }
 	client, rw, err := hijacker.Hijack()
 	if err != nil { return }
-	if _, err = rw.WriteString("HTTP/1.1 200 Connection Established\\r\\n\\r\\n"); err == nil { err = rw.Flush() }
+	if _, err = rw.WriteString("HTTP/1.1 200 Connection Established\r\n\r\n"); err == nil { err = rw.Flush() }
 	if err != nil { _ = client.Close(); return }
 	// Preserve any bytes net/http read beyond the CONNECT headers.
 	inbound := &bufferedConn{Conn: client, reader: rw.Reader}
